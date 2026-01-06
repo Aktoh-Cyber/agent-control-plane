@@ -1,0 +1,210 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-control-plane.io/schemas/monitoring-tools.json",
+  "title": "Monitoring & Status Tools Schema",
+  "description": "Contract schemas for swarm and agent monitoring",
+  "definitions": {
+    "swarmStatusInput": {
+      "type": "object",
+      "properties": {
+        "swarmId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "detailed": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "swarmStatusOutput": {
+      "type": "object",
+      "required": ["swarmId", "status", "agentCount"],
+      "properties": {
+        "swarmId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["initializing", "running", "paused", "stopped", "error"]
+        },
+        "topology": {
+          "type": "string"
+        },
+        "agentCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeAgents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "taskQueue": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uptime": {
+          "type": "integer",
+          "description": "Uptime in seconds"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "agentListInput": {
+      "type": "object",
+      "properties": {
+        "swarmId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["all", "active", "idle", "busy", "error"]
+        }
+      }
+    },
+    "agentListOutput": {
+      "type": "object",
+      "required": ["agents", "totalCount"],
+      "properties": {
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "type", "status"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "currentTask": {
+                "type": "string"
+              },
+              "lastActivity": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        },
+        "totalCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "agentMetricsInput": {
+      "type": "object",
+      "required": ["agentId"],
+      "properties": {
+        "agentId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "timeRange": {
+          "type": "string",
+          "enum": ["1h", "24h", "7d", "30d"],
+          "default": "24h"
+        }
+      }
+    },
+    "agentMetricsOutput": {
+      "type": "object",
+      "required": ["agentId", "metrics"],
+      "properties": {
+        "agentId": {
+          "type": "string"
+        },
+        "metrics": {
+          "type": "object",
+          "required": ["tasksCompleted", "avgResponseTime"],
+          "properties": {
+            "tasksCompleted": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "tasksFailed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "avgResponseTime": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Average response time in milliseconds"
+            },
+            "successRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "tokensUsed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "timeRange": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "taskStatusInput": {
+      "type": "object",
+      "required": ["taskId"],
+      "properties": {
+        "taskId": {
+          "type": "string"
+        }
+      }
+    },
+    "taskStatusOutput": {
+      "type": "object",
+      "required": ["taskId", "status"],
+      "properties": {
+        "taskId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "running", "completed", "failed", "cancelled"]
+        },
+        "assignedAgent": {
+          "type": "string"
+        },
+        "progress": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completionTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

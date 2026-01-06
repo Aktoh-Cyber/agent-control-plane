@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-control-plane.io/schemas/memory-tools.json",
+  "title": "Memory Management Tools Schema",
+  "description": "Contract schemas for memory and coordination tools",
+  "definitions": {
+    "memoryStoreInput": {
+      "type": "object",
+      "required": ["action", "key", "value"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "const": "store"
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_/-]+$"
+        },
+        "value": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string",
+          "default": "coordination"
+        },
+        "ttl": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Time to live in seconds"
+        }
+      }
+    },
+    "memoryStoreOutput": {
+      "type": "object",
+      "required": ["success", "key"],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "stored": {
+          "type": "boolean"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "memoryRetrieveInput": {
+      "type": "object",
+      "required": ["action", "key"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "const": "retrieve"
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_/-]+$"
+        },
+        "namespace": {
+          "type": "string",
+          "default": "coordination"
+        }
+      }
+    },
+    "memoryRetrieveOutput": {
+      "type": "object",
+      "required": ["success", "key"],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "found": {
+          "type": "boolean"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "memoryUsageInput": {
+      "type": "object",
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "detailed": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "memoryUsageOutput": {
+      "type": "object",
+      "required": ["totalKeys", "namespaces"],
+      "properties": {
+        "totalKeys": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "namespaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sizeBytes": {
+          "type": "integer"
+        },
+        "details": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "keys": {
+                "type": "integer"
+              },
+              "sizeBytes": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+FROM node:22-slim
+WORKDIR /app
+
+# Copy local built package
+COPY agent-control-plane/package.json ./
+COPY agent-control-plane/dist ./dist
+COPY agent-control-plane/.claude ./.claude
+
+# Install dependencies and link globally
+RUN npm install --omit=dev && npm link
+
+ENV NODE_ENV=production
+
+# Test MCP server tools
+CMD ["sh", "-c", "\
+echo '🧪 Testing Agentic-Flow MCP Tools...' && echo '' && \
+\
+echo '1️⃣ Installing agent-control-plane@latest globally for npx access...' && \
+npm install -g agent-control-plane@latest && \
+echo '✅ Package installed' && echo '' && \
+\
+echo '2️⃣ Testing direct CLI commands...' && \
+agent-control-plane --list 2>&1 | grep -q 'coder' && \
+echo '✅ CLI --list works' && echo '' && \
+\
+echo '3️⃣ Testing npx execution (what MCP server uses)...' && \
+npx --yes agent-control-plane --list 2>&1 | grep -q 'coder' && \
+echo '✅ npx --yes agent-control-plane --list works' && echo '' && \
+\
+echo '4️⃣ Simulating MCP tool: agentic_flow_list_agents...' && \
+node -e \"const { execSync } = require('child_process'); \
+const result = execSync('npx --yes agent-control-plane --list', { encoding: 'utf-8', maxBuffer: 5 * 1024 * 1024, timeout: 30000 }); \
+console.log(JSON.stringify({ success: true, agents: result.trim() }, null, 2));\" && \
+echo '✅ MCP tool simulation works' && echo '' && \
+\
+echo '5️⃣ Verifying package structure...' && \
+test -f dist/mcp/standalone-stdio.js && echo '✅ MCP server file exists' && \
+test -f dist/cli-proxy.js && echo '✅ CLI proxy exists' && \
+test -d .claude/agents && echo '✅ Agents directory exists' && \
+echo '' && \
+\
+echo '═══════════════════════════════════════' && \
+echo '  MCP Tools Validation Summary' && \
+echo '═══════════════════════════════════════' && \
+echo '✅ agentic_flow_list_agents: Ready' && \
+echo '✅ agentic_flow_agent: Ready (executes via npx)' && \
+echo '✅ Package structure: Complete' && \
+echo '✅ npx execution: Verified' && \
+echo '' && \
+echo '🎉 MCP server is ready for use!' \
+"]

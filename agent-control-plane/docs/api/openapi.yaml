@@ -1,0 +1,1038 @@
+openapi: 3.0.0
+info:
+  title: Agentic Flow API
+  version: 1.10.3
+  description: |
+    Production-ready AI agent orchestration platform with 66 specialized agents, 213 MCP tools,
+    ReasoningBank learning memory, and autonomous multi-agent swarms.
+
+    **Key Features:**
+    - 66+ specialized AI agents for development, research, and coordination
+    - 213 MCP (Model Context Protocol) tools across multiple packages
+    - ReasoningBank adaptive learning memory system
+    - Multi-model router with 100+ LLM models
+    - QUIC transport for ultra-low latency
+    - Distributed consensus protocols (Raft, Byzantine, CRDT)
+    - GitHub integration for code review and project management
+
+    **Architecture:**
+    - Built on Claude Agent SDK by Anthropic
+    - FastMCP for Model Context Protocol implementation
+    - AgentDB for state-of-the-art memory with causal reasoning
+    - ONNX Runtime for local GPU/CPU inference
+
+  contact:
+    name: ruv
+    url: https://github.com/Aktoh-Cyber/agent-control-plane
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://api.agent-control-plane.io
+    description: Production API (if deployed)
+  - url: http://localhost:4433
+    description: QUIC transport server
+
+tags:
+  - name: Agents
+    description: AI agent execution and management
+  - name: MCP Tools
+    description: Model Context Protocol tools (213 total)
+  - name: Billing
+    description: Subscription and usage management
+  - name: Memory
+    description: ReasoningBank and AgentDB memory operations
+  - name: Swarm
+    description: Multi-agent coordination and swarm intelligence
+  - name: GitHub
+    description: GitHub integration tools
+  - name: QUIC
+    description: Ultra-low latency transport protocol
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+
+paths:
+  /api/agents:
+    get:
+      tags:
+        - Agents
+      summary: List all available agents
+      description: Get a list of all 66+ available agents with their capabilities
+      operationId: listAgents
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    example: 66
+                  agents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Agent'
+              example:
+                success: true
+                count: 66
+                agents:
+                  - id: coder
+                    name: Coder
+                    type: core-development
+                    description: Implementation specialist for writing clean, efficient code
+                    capabilities:
+                      - coding
+                      - refactoring
+                      - debugging
+                  - id: researcher
+                    name: Researcher
+                    type: core-development
+                    description: Deep research and information gathering
+                    capabilities:
+                      - research
+                      - analysis
+                      - documentation
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/agents/{agentId}:
+    get:
+      tags:
+        - Agents
+      summary: Get agent details
+      description: Get detailed information about a specific agent
+      operationId: getAgent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Agent identifier (e.g., 'coder', 'researcher')
+          example: coder
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/agents/execute:
+    post:
+      tags:
+        - Agents
+      summary: Execute an agent
+      description: Run an agent with a specific task and configuration
+      operationId: executeAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentExecutionRequest'
+            example:
+              agent: coder
+              task: Build a REST API with authentication
+              model: claude-sonnet-4-5-20250929
+              provider: anthropic
+              stream: false
+              maxTokens: 4096
+      responses:
+        '200':
+          description: Agent execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentExecutionResponse'
+            example:
+              success: true
+              agent: coder
+              task: Build a REST API with authentication
+              model: claude-sonnet-4-5-20250929
+              provider: anthropic
+              executionTime: 12450
+              tokensUsed: 3456
+              output: |
+                I've created a REST API with authentication...
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /api/mcp/tools:
+    get:
+      tags:
+        - MCP Tools
+      summary: List all MCP tools
+      description: |
+        Get a comprehensive list of all 213 MCP tools across all packages:
+        - Agentic-Flow: 7 core tools
+        - Claude-Flow: 101 coordination tools
+        - Flow-Nexus: 96 cloud tools
+        - Agentic-Payments: 10 payment tools
+        - AgentDB: 17 memory commands
+      operationId: listMcpTools
+      parameters:
+        - name: package
+          in: query
+          schema:
+            type: string
+            enum:
+              - agent-control-plane
+              - claude-flow
+              - flow-nexus
+              - agentic-payments
+              - agentdb
+              - all
+          description: Filter tools by package
+          example: agent-control-plane
+      responses:
+        '200':
+          description: List of MCP tools
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  totalCount:
+                    type: integer
+                    example: 213
+                  packages:
+                    type: object
+                    properties:
+                      agent-control-plane:
+                        type: integer
+                        example: 7
+                      claude-flow:
+                        type: integer
+                        example: 101
+                      flow-nexus:
+                        type: integer
+                        example: 96
+                      agentic-payments:
+                        type: integer
+                        example: 10
+                  tools:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/McpTool'
+
+  /api/mcp/tools/{toolName}:
+    get:
+      tags:
+        - MCP Tools
+      summary: Get MCP tool details
+      description: Get detailed schema and documentation for a specific MCP tool
+      operationId: getMcpTool
+      parameters:
+        - name: toolName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: MCP tool name
+          example: agentic_flow_agent
+      responses:
+        '200':
+          description: MCP tool details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/McpToolDetail'
+
+  /api/mcp/tools/execute:
+    post:
+      tags:
+        - MCP Tools
+      summary: Execute an MCP tool
+      description: Execute a Model Context Protocol tool with parameters
+      operationId: executeMcpTool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - toolName
+                - parameters
+              properties:
+                toolName:
+                  type: string
+                  description: Name of the MCP tool to execute
+                  example: agentic_flow_agent
+                parameters:
+                  type: object
+                  description: Tool-specific parameters
+                  example:
+                    agent: coder
+                    task: Build a REST API
+      responses:
+        '200':
+          description: Tool execution result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  result:
+                    type: object
+
+  /api/billing/subscriptions:
+    post:
+      tags:
+        - Billing
+      summary: Create subscription
+      description: Create a new subscription for a user
+      operationId: createSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionCreateRequest'
+      responses:
+        '201':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/billing/subscriptions/{subscriptionId}:
+    get:
+      tags:
+        - Billing
+      summary: Get subscription
+      description: Get subscription details and current status
+      operationId: getSubscription
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+
+    delete:
+      tags:
+        - Billing
+      summary: Cancel subscription
+      description: Cancel an active subscription
+      operationId: cancelSubscription
+      parameters:
+        - name: subscriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: immediate
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Subscription cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+
+  /api/billing/usage:
+    post:
+      tags:
+        - Billing
+      summary: Record usage
+      description: Record usage metrics for billing
+      operationId: recordUsage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsageRecord'
+      responses:
+        '201':
+          description: Usage recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  usageId:
+                    type: string
+
+  /api/memory/store:
+    post:
+      tags:
+        - Memory
+      summary: Store memory
+      description: Store information in ReasoningBank learning memory
+      operationId: storeMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryStoreRequest'
+      responses:
+        '201':
+          description: Memory stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  memoryId:
+                    type: string
+
+  /api/memory/retrieve:
+    post:
+      tags:
+        - Memory
+      summary: Retrieve memory
+      description: Semantic search and retrieval from ReasoningBank
+      operationId: retrieveMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryRetrieveRequest'
+      responses:
+        '200':
+          description: Retrieved memories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryRetrieveResponse'
+
+  /api/swarm/init:
+    post:
+      tags:
+        - Swarm
+      summary: Initialize swarm
+      description: Initialize a multi-agent swarm with specific topology
+      operationId: initSwarm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SwarmInitRequest'
+      responses:
+        '201':
+          description: Swarm initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SwarmInitResponse'
+
+  /api/swarm/{swarmId}/agents:
+    post:
+      tags:
+        - Swarm
+      summary: Spawn agent in swarm
+      description: Add a new agent to an existing swarm
+      operationId: spawnAgent
+      parameters:
+        - name: swarmId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentSpawnRequest'
+      responses:
+        '201':
+          description: Agent spawned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  agentId:
+                    type: string
+                  swarmId:
+                    type: string
+
+  /api/github/analyze:
+    post:
+      tags:
+        - GitHub
+      summary: Analyze repository
+      description: Analyze a GitHub repository using AI swarm
+      operationId: analyzeRepository
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - repository
+              properties:
+                repository:
+                  type: string
+                  description: Repository in format 'owner/repo'
+                  example: Aktoh-Cyber/agent-control-plane
+                depth:
+                  type: string
+                  enum: [shallow, medium, deep]
+                  default: medium
+      responses:
+        '200':
+          description: Repository analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  repository:
+                    type: string
+                  analysis:
+                    type: object
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token authentication
+
+  schemas:
+    Agent:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - description
+      properties:
+        id:
+          type: string
+          example: coder
+        name:
+          type: string
+          example: Coder
+        type:
+          type: string
+          enum:
+            - core-development
+            - specialized
+            - swarm-coordinator
+            - github-integration
+          example: core-development
+        description:
+          type: string
+          example: Implementation specialist for writing clean, efficient code
+        capabilities:
+          type: array
+          items:
+            type: string
+          example:
+            - coding
+            - refactoring
+            - debugging
+
+    AgentDetail:
+      allOf:
+        - $ref: '#/components/schemas/Agent'
+        - type: object
+          properties:
+            models:
+              type: array
+              items:
+                type: string
+              example:
+                - claude-sonnet-4-5-20250929
+                - gpt-4o
+                - deepseek-r1
+            defaultModel:
+              type: string
+              example: claude-sonnet-4-5-20250929
+            systemPrompt:
+              type: string
+            temperature:
+              type: number
+              format: float
+              minimum: 0
+              maximum: 1
+              example: 0.7
+            maxTokens:
+              type: integer
+              example: 4096
+
+    AgentExecutionRequest:
+      type: object
+      required:
+        - agent
+        - task
+      properties:
+        agent:
+          type: string
+          description: Agent identifier
+          example: coder
+        task:
+          type: string
+          description: Task description
+          example: Build a REST API with authentication
+        model:
+          type: string
+          description: LLM model to use
+          example: claude-sonnet-4-5-20250929
+        provider:
+          type: string
+          enum:
+            - anthropic
+            - openrouter
+            - gemini
+            - onnx
+          description: LLM provider
+          example: anthropic
+        stream:
+          type: boolean
+          default: false
+          description: Enable streaming output
+        temperature:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Sampling temperature
+        maxTokens:
+          type: integer
+          minimum: 1
+          description: Maximum tokens in response
+        timeout:
+          type: integer
+          description: Execution timeout in milliseconds
+          example: 300000
+
+    AgentExecutionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        agent:
+          type: string
+        task:
+          type: string
+        model:
+          type: string
+        provider:
+          type: string
+        executionTime:
+          type: integer
+          description: Execution time in milliseconds
+        tokensUsed:
+          type: integer
+          description: Total tokens consumed
+        output:
+          type: string
+          description: Agent output
+        error:
+          type: string
+          description: Error message if failed
+
+    McpTool:
+      type: object
+      required:
+        - name
+        - description
+        - package
+      properties:
+        name:
+          type: string
+          example: agentic_flow_agent
+        description:
+          type: string
+          example: Execute an agent-control-plane agent with a specific task
+        package:
+          type: string
+          enum:
+            - agent-control-plane
+            - claude-flow
+            - flow-nexus
+            - agentic-payments
+            - agentdb
+          example: agent-control-plane
+        category:
+          type: string
+          example: agent-execution
+        parameters:
+          type: object
+          description: JSON Schema for tool parameters
+
+    McpToolDetail:
+      allOf:
+        - $ref: '#/components/schemas/McpTool'
+        - type: object
+          properties:
+            inputSchema:
+              type: object
+              description: Complete JSON Schema for inputs
+            outputSchema:
+              type: object
+              description: Expected output schema
+            examples:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  input:
+                    type: object
+                  output:
+                    type: object
+            errorCodes:
+              type: array
+              items:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  httpStatus:
+                    type: integer
+
+    SubscriptionCreateRequest:
+      type: object
+      required:
+        - userId
+        - tier
+        - billingCycle
+        - paymentMethodId
+      properties:
+        userId:
+          type: string
+        tier:
+          type: string
+          enum:
+            - free
+            - hobby
+            - professional
+            - business
+            - enterprise
+        billingCycle:
+          type: string
+          enum:
+            - monthly
+            - quarterly
+            - yearly
+        paymentMethodId:
+          type: string
+        couponCode:
+          type: string
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        tier:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - cancelled
+            - past_due
+            - unpaid
+        billingCycle:
+          type: string
+        currentPeriodStart:
+          type: string
+          format: date-time
+        currentPeriodEnd:
+          type: string
+          format: date-time
+        cancelAtPeriodEnd:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UsageRecord:
+      type: object
+      required:
+        - subscriptionId
+        - userId
+        - metric
+        - amount
+        - unit
+      properties:
+        subscriptionId:
+          type: string
+        userId:
+          type: string
+        metric:
+          type: string
+          enum:
+            - agent_hours
+            - api_calls
+            - storage_gb
+            - bandwidth_gb
+            - team_members
+            - concurrent_agents
+            - neural_training_hours
+            - vector_operations
+            - gpu_hours
+            - swarm_coordination_minutes
+        amount:
+          type: number
+          format: float
+        unit:
+          type: string
+
+    MemoryStoreRequest:
+      type: object
+      required:
+        - key
+        - value
+      properties:
+        key:
+          type: string
+          description: Memory key/identifier
+        value:
+          type: string
+          description: Memory content
+        metadata:
+          type: object
+          description: Additional metadata
+        embedding:
+          type: array
+          items:
+            type: number
+          description: Optional pre-computed embedding
+
+    MemoryRetrieveRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: Search query
+        limit:
+          type: integer
+          default: 10
+          description: Maximum results to return
+        threshold:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Minimum similarity threshold
+
+    MemoryRetrieveResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              value:
+                type: string
+              similarity:
+                type: number
+              metadata:
+                type: object
+
+    SwarmInitRequest:
+      type: object
+      required:
+        - topology
+        - maxAgents
+      properties:
+        topology:
+          type: string
+          enum:
+            - mesh
+            - hierarchical
+            - ring
+            - star
+            - adaptive
+          description: Swarm topology pattern
+        maxAgents:
+          type: integer
+          minimum: 2
+          maximum: 100
+          description: Maximum number of agents in swarm
+        consensusProtocol:
+          type: string
+          enum:
+            - raft
+            - byzantine
+            - gossip
+            - none
+          description: Consensus mechanism for coordination
+
+    SwarmInitResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        swarmId:
+          type: string
+        topology:
+          type: string
+        maxAgents:
+          type: integer
+        status:
+          type: string
+          enum:
+            - initialized
+            - active
+            - degraded
+            - failed
+
+    AgentSpawnRequest:
+      type: object
+      required:
+        - agentType
+      properties:
+        agentType:
+          type: string
+          description: Type of agent to spawn
+        role:
+          type: string
+          description: Role in swarm
+        capabilities:
+          type: array
+          items:
+            type: string
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        details:
+          type: object
+          description: Additional error details
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: ValidationError
+            message: Invalid request parameters
+            code: VAL_3001
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: AuthenticationError
+            message: Invalid API key
+            code: AUTH_5001
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: NotFoundError
+            message: Resource not found
+            code: NET_4003
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: RateLimitError
+            message: Rate limit exceeded. Retry after 60 seconds.
+            code: NET_4012
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: InternalServerError
+            message: An unexpected error occurred
+            code: SYS_5000

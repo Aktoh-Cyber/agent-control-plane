@@ -1,0 +1,49 @@
+{
+  "extends": "./config/tsconfig.json",
+  "compilerOptions": {
+    /* Performance Optimizations */
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+
+    /* Emit optimizations for faster builds */
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "inlineSourceMap": false,
+    "inlineSources": false,
+
+    /* Skip checks for faster builds */
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+
+    /* Parallel build support */
+    "composite": true,
+
+    /* Module resolution */
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+
+    /* Output */
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "removeComments": true,
+
+    /* Type checking - keep minimal for build performance */
+    "strict": false,
+    "noEmitOnError": false
+  },
+  "include": ["src"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "validation",
+    "src/examples/parallel-swarm-deployment.ts",
+    "src/agentdb/cli/**",
+    "src/agentdb/benchmarks/**",
+    "src/agentdb/tests/**",
+    "src/agentdb/controllers/**",
+    "src/agentdb/optimizations/**"
+  ],
+  "references": []
+}

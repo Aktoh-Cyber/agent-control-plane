@@ -1,0 +1,100 @@
+name: Build Optimization with Caching
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-optimized:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      # Cache Rust build artifacts
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ../reasoningbank/target/
+            ../reasoningbank/crates/reasoningbank-wasm/pkg/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # Cache TypeScript build info
+      - name: Cache TypeScript build
+        uses: actions/cache@v4
+        with:
+          path: |
+            dist/
+            dist/.tsbuildinfo
+            node_modules/.cache/
+          key: ${{ runner.os }}-ts-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.ts') }}
+          restore-keys: |
+            ${{ runner.os }}-ts-${{ hashFiles('**/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-ts-
+
+      # Cache WASM build artifacts
+      - name: Cache WASM build
+        uses: actions/cache@v4
+        with:
+          path: wasm/reasoningbank/
+          key: ${{ runner.os }}-wasm-${{ hashFiles('../reasoningbank/crates/**/*.rs') }}
+          restore-keys: |
+            ${{ runner.os }}-wasm-
+
+      # Cache node_modules (pnpm handles this automatically via 'cache: pnpm')
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Run optimized build
+      - name: Build with optimizations
+        run: pnpm run build:optimized
+        env:
+          NODE_ENV: production
+
+      # Type checking in parallel (doesn't block build)
+      - name: Type check
+        run: pnpm run typecheck
+        continue-on-error: true
+
+      # Store build artifacts
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ matrix.node-version }}
+          path: |
+            dist/
+            wasm/
+          retention-days: 7
+
+      # Cache validation (optional)
+      - name: Validate cache effectiveness
+        run: |
+          echo "Build completed with caching"
+          ls -lah dist/
+          ls -lah wasm/reasoningbank/ || echo "WASM not cached"

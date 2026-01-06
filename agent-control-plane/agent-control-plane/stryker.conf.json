@@ -1,0 +1,117 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "Stryker Mutation Testing Configuration for Agentic Flow",
+
+  "packageManager": "npm",
+  "testRunner": "jest",
+  "coverageAnalysis": "perTest",
+  "concurrency": 4,
+  "tempDirName": ".stryker-tmp",
+
+  "mutate": [
+    "agent-control-plane/src/security/**/*.ts",
+    "agent-control-plane/src/config/**/*.ts",
+    "agent-control-plane/src/errors/**/*.ts",
+    "agent-control-plane/src/reasoningbank/**/*.ts",
+    "!**/*.test.ts",
+    "!**/*.spec.ts",
+    "!**/index.ts",
+    "!**/*.d.ts"
+  ],
+
+  "testMatch": ["agent-control-plane/tests/**/*.test.ts", "agent-control-plane/tests/**/*.spec.ts"],
+
+  "mutator": {
+    "plugins": ["@stryker-mutator/typescript-checker"],
+    "excludedMutations": [],
+    "mutatorTypes": [
+      "ArithmeticOperator",
+      "ArrayDeclaration",
+      "ArrowFunction",
+      "BlockStatement",
+      "BooleanLiteral",
+      "ConditionalExpression",
+      "EqualityOperator",
+      "LogicalOperator",
+      "MethodExpression",
+      "ObjectLiteral",
+      "OptionalChaining",
+      "StringLiteral",
+      "UnaryOperator",
+      "UpdateOperator",
+      "RegexLiteral"
+    ]
+  },
+
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 75
+  },
+
+  "incremental": true,
+  "incrementalFile": ".stryker-tmp/incremental.json",
+
+  "checkers": ["typescript"],
+
+  "timeoutMS": 60000,
+  "timeoutFactor": 1.5,
+
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/.stryker-tmp/**",
+    "**/test-reports/**",
+    "**/benchmarks/**",
+    "**/examples/**"
+  ],
+
+  "reporters": ["html", "json", "clear-text", "progress", "dashboard"],
+
+  "htmlReporter": {
+    "baseDir": "test-reports/mutation",
+    "fileName": "mutation-report.html"
+  },
+
+  "jsonReporter": {
+    "fileName": "test-reports/mutation/mutation-report.json"
+  },
+
+  "dashboard": {
+    "project": "github.com/tafyai/agent-control-plane",
+    "version": "main",
+    "module": "core"
+  },
+
+  "commandRunner": {
+    "command": "npm test -- --findRelatedTests"
+  },
+
+  "plugins": [
+    "@stryker-mutator/core",
+    "@stryker-mutator/typescript-checker",
+    "@stryker-mutator/jest-runner"
+  ],
+
+  "warnings": {
+    "unknownOptions": true,
+    "preprocessorErrors": true,
+    "slow": true
+  },
+
+  "dryRunTimeoutMinutes": 5,
+
+  "clearTextReporter": {
+    "allowColor": true,
+    "allowEmojis": true,
+    "logTests": true,
+    "maxTestsToLog": 10
+  },
+
+  "disableTypeChecks": false,
+
+  "symlinkNodeModules": true,
+
+  "buildCommand": "npm run build:ts"
+}

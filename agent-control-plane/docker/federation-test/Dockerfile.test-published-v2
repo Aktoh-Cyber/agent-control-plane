@@ -1,0 +1,76 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Install build dependencies for native modules
+RUN apt-get update && apt-get install -y python3 make g++ curl && rm -rf /var/lib/apt/lists/*
+
+# Install the published npm package locally
+RUN npm install agent-control-plane@1.8.13 express
+
+# Verify installation
+RUN npx agent-control-plane --version
+
+# Create test script
+COPY << 'EOF' /app/test-hub.js
+import { FederationHubServer } from 'agent-control-plane/dist/federation/FederationHubServer.js';
+import express from 'express';
+
+const PORT = parseInt(process.env.FEDERATION_HUB_PORT || '8443');
+const DB_PATH = process.env.FEDERATION_DB_PATH || '/data/hub.db';
+
+async function main() {
+  console.log('\n🌐 Testing Published Package v1.8.13...');
+  console.log('═'.repeat(60));
+  console.log(`📍 Port: ${PORT}`);
+  console.log(`💾 Database: ${DB_PATH}`);
+  console.log('');
+
+  try {
+    const hub = new FederationHubServer({
+      port: PORT,
+      dbPath: DB_PATH,
+      maxAgents: 100,
+      syncInterval: 5000
+    });
+
+    await hub.start();
+
+    const app = express();
+    const healthPort = 8444;
+
+    app.get('/health', (req, res) => {
+      const stats = hub.getStats();
+      res.json({ status: 'healthy', ...stats, timestamp: Date.now() });
+    });
+
+    app.get('/stats', (req, res) => {
+      res.json(hub.getStats());
+    });
+
+    app.listen(healthPort, () => {
+      console.log(`✅ Health check server running on port ${healthPort}`);
+    });
+
+    console.log('✅ Published package working correctly!');
+    console.log('═'.repeat(60));
+
+    process.on('SIGTERM', async () => {
+      console.log('\n🛑 Shutting down...');
+      await hub.stop();
+      process.exit(0);
+    });
+  } catch (error) {
+    console.error('❌ Test failed:', error);
+    process.exit(1);
+  }
+}
+
+main();
+EOF
+
+# Expose ports
+EXPOSE 8443 8444
+
+# Run test script
+CMD ["node", "/app/test-hub.js"]

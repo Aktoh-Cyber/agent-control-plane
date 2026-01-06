@@ -1,0 +1,119 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-control-plane.io/schemas/github-tools.json",
+  "title": "GitHub Integration Tools Schema",
+  "description": "Contract schemas for GitHub repository management",
+  "definitions": {
+    "repoAnalyzeInput": {
+      "type": "object",
+      "required": ["repository"],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$"
+        },
+        "branch": {
+          "type": "string",
+          "default": "main"
+        },
+        "includeMetrics": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "repoAnalyzeOutput": {
+      "type": "object",
+      "required": ["repository", "analysis"],
+      "properties": {
+        "repository": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "analysis": {
+          "type": "object",
+          "properties": {
+            "languages": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              }
+            },
+            "fileCount": {
+              "type": "integer"
+            },
+            "size": {
+              "type": "integer"
+            },
+            "commitCount": {
+              "type": "integer"
+            },
+            "contributors": {
+              "type": "integer"
+            }
+          }
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "prEnhanceInput": {
+      "type": "object",
+      "required": ["repository", "prNumber"],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+$"
+        },
+        "prNumber": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["review", "test", "format", "docs"]
+          }
+        }
+      }
+    },
+    "prEnhanceOutput": {
+      "type": "object",
+      "required": ["repository", "prNumber", "enhanced"],
+      "properties": {
+        "repository": {
+          "type": "string"
+        },
+        "prNumber": {
+          "type": "integer"
+        },
+        "enhanced": {
+          "type": "boolean"
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string"
+              },
+              "result": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

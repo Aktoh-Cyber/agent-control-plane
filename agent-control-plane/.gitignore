@@ -1,0 +1,13 @@
+node_modules/
+# dist/
+.env
+*.log
+*.tgz
+models/
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+agent-control-plane/examples/crispr-cas13-pipeline/target/

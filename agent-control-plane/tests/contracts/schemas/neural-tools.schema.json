@@ -1,0 +1,188 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-control-plane.io/schemas/neural-tools.json",
+  "title": "Neural Network Tools Schema",
+  "description": "Contract schemas for neural training and pattern recognition",
+  "definitions": {
+    "neuralTrainInput": {
+      "type": "object",
+      "required": ["model", "trainingData"],
+      "properties": {
+        "model": {
+          "type": "string",
+          "enum": ["reasoningbank", "agentdb", "custom"]
+        },
+        "trainingData": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["input", "output"],
+            "properties": {
+              "input": {
+                "type": "object"
+              },
+              "output": {
+                "type": "object"
+              },
+              "weight": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "default": 1
+              }
+            }
+          }
+        },
+        "epochs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 10
+        },
+        "batchSize": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 32
+        }
+      }
+    },
+    "neuralTrainOutput": {
+      "type": "object",
+      "required": ["success", "modelId", "accuracy"],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "modelId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "accuracy": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "loss": {
+          "type": "number",
+          "minimum": 0
+        },
+        "epochs": {
+          "type": "integer"
+        },
+        "trainingTime": {
+          "type": "integer",
+          "description": "Training time in milliseconds"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "neuralPatternsInput": {
+      "type": "object",
+      "properties": {
+        "modelId": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        },
+        "minConfidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.7
+        }
+      }
+    },
+    "neuralPatternsOutput": {
+      "type": "object",
+      "required": ["patterns"],
+      "properties": {
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["pattern", "confidence", "frequency"],
+            "properties": {
+              "pattern": {
+                "type": "string"
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "frequency": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "category": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "totalPatterns": {
+          "type": "integer"
+        },
+        "modelId": {
+          "type": "string"
+        }
+      }
+    },
+    "neuralStatusInput": {
+      "type": "object",
+      "properties": {
+        "modelId": {
+          "type": "string"
+        }
+      }
+    },
+    "neuralStatusOutput": {
+      "type": "object",
+      "required": ["modelsLoaded"],
+      "properties": {
+        "modelsLoaded": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "type", "status"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["ready", "training", "error"]
+              },
+              "accuracy": {
+                "type": "number"
+              },
+              "lastUpdated": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        },
+        "memoryUsage": {
+          "type": "integer",
+          "description": "Memory usage in bytes"
+        }
+      }
+    }
+  }
+}

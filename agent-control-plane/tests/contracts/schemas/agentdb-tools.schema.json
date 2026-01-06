@@ -1,0 +1,165 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-control-plane.io/schemas/agentdb-tools.json",
+  "title": "AgentDB Vector Database Tools Schema",
+  "description": "Contract schemas for AgentDB vector operations",
+  "definitions": {
+    "vectorStoreInput": {
+      "type": "object",
+      "required": ["collection", "vector", "metadata"],
+      "properties": {
+        "collection": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "vector": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "vectorStoreOutput": {
+      "type": "object",
+      "required": ["success", "id"],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "collection": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "vectorSearchInput": {
+      "type": "object",
+      "required": ["collection", "query"],
+      "properties": {
+        "collection": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "query": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 1
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        },
+        "threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.7
+        },
+        "metric": {
+          "type": "string",
+          "enum": ["cosine", "euclidean", "dot"],
+          "default": "cosine"
+        }
+      }
+    },
+    "vectorSearchOutput": {
+      "type": "object",
+      "required": ["results"],
+      "properties": {
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "score", "metadata"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "score": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "vector": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "metadata": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "count": {
+          "type": "integer"
+        },
+        "searchTime": {
+          "type": "number",
+          "description": "Search time in milliseconds"
+        }
+      }
+    },
+    "collectionCreateInput": {
+      "type": "object",
+      "required": ["name", "dimension"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$"
+        },
+        "dimension": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "metric": {
+          "type": "string",
+          "enum": ["cosine", "euclidean", "dot"],
+          "default": "cosine"
+        }
+      }
+    },
+    "collectionCreateOutput": {
+      "type": "object",
+      "required": ["success", "name"],
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "dimension": {
+          "type": "integer"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

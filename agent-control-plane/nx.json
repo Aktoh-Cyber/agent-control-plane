@@ -1,0 +1,108 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "affected": {
+    "defaultBase": "main"
+  },
+  "targetDefaults": {
+    "build": {
+      "dependsOn": ["^build"],
+      "cache": true,
+      "inputs": ["production", "^production"],
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "build:wasm": {
+      "dependsOn": [],
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/crates/**/*",
+        "{projectRoot}/Cargo.toml",
+        "{projectRoot}/Cargo.lock"
+      ],
+      "outputs": ["{projectRoot}/pkg/**", "{projectRoot}/wasm/**"]
+    },
+    "test": {
+      "cache": true,
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/jest.config.js",
+        "{workspaceRoot}/jest.config.medical.cjs"
+      ],
+      "outputs": [
+        "{projectRoot}/coverage",
+        "{workspaceRoot}/test-reports",
+        "{workspaceRoot}/test-results"
+      ]
+    },
+    "lint": {
+      "cache": true,
+      "inputs": ["default", "{workspaceRoot}/.eslintrc.json"]
+    },
+    "typecheck": {
+      "cache": true,
+      "inputs": ["production", "^production"]
+    }
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/jest.config.[jt]s",
+      "!{projectRoot}/.eslintrc.json",
+      "!{projectRoot}/src/test-setup.[jt]s",
+      "!{projectRoot}/test-setup.[jt]s",
+      "!{projectRoot}/**/*.test.ts",
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/tests/**/*"
+    ],
+    "sharedGlobals": [
+      "{workspaceRoot}/pnpm-lock.yaml",
+      "{workspaceRoot}/package.json",
+      "{workspaceRoot}/tsconfig.json",
+      "{workspaceRoot}/tsconfig.base.json"
+    ]
+  },
+  "generators": {
+    "@nx/js:library": {
+      "buildable": true,
+      "publishable": true,
+      "importPath": "@agent-control-plane/{projectName}"
+    },
+    "@nx/node:application": {
+      "bundler": "esbuild"
+    }
+  },
+  "tasksRunnerOptions": {
+    "default": {
+      "runner": "nx/tasks-runners/default",
+      "options": {
+        "cacheableOperations": ["build", "build:wasm", "test", "lint", "typecheck"],
+        "parallel": 3,
+        "cacheDirectory": ".nx/cache"
+      }
+    }
+  },
+  "pluginsConfig": {
+    "@nx/js": {
+      "analyzeSourceFiles": true
+    }
+  },
+  "workspaceLayout": {
+    "appsDir": "apps",
+    "libsDir": "packages"
+  },
+  "cli": {
+    "packageManager": "pnpm"
+  },
+  "nxCloudAccessToken": "REPLACE_WITH_NX_CLOUD_TOKEN_AFTER_SETUP",
+  "plugins": [
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "lint"
+      }
+    }
+  ]
+}

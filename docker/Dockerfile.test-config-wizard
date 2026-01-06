@@ -1,0 +1,51 @@
+FROM node:22-slim
+WORKDIR /app
+
+# Copy local built package
+COPY agent-control-plane/package.json ./
+COPY agent-control-plane/dist ./dist
+COPY agent-control-plane/.claude ./.claude
+
+# Install dependencies and link globally
+RUN npm install --omit=dev && npm link
+
+ENV NODE_ENV=production
+
+# Test script that validates all config commands
+CMD ["sh", "-c", "\
+echo '🧪 Testing Config Wizard...' && echo '' && \
+\
+echo '1️⃣ Testing config help...' && \
+agent-control-plane config help && \
+echo '✅ Help works' && echo '' && \
+\
+echo '2️⃣ Testing config list (should be empty/defaults)...' && \
+agent-control-plane config list && \
+echo '✅ List works' && echo '' && \
+\
+echo '3️⃣ Testing config set PROVIDER...' && \
+agent-control-plane config set PROVIDER openrouter && \
+echo '✅ Set works' && echo '' && \
+\
+echo '4️⃣ Testing config get PROVIDER...' && \
+agent-control-plane config get PROVIDER | grep -q openrouter && \
+echo '✅ Get works' && echo '' && \
+\
+echo '5️⃣ Testing config set API key...' && \
+agent-control-plane config set OPENROUTER_API_KEY sk-or-v1-test123 && \
+echo '✅ API key set' && echo '' && \
+\
+echo '6️⃣ Verifying .env file created...' && \
+test -f .env && echo '✅ .env file exists' && \
+cat .env && echo '' && \
+\
+echo '7️⃣ Testing config delete...' && \
+agent-control-plane config delete PROVIDER && \
+echo '✅ Delete works' && echo '' && \
+\
+echo '8️⃣ Testing config reset...' && \
+agent-control-plane config reset && \
+echo '✅ Reset works' && echo '' && \
+\
+echo '✅ All config wizard tests passed!' \
+"]

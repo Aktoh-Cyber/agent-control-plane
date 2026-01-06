@@ -1,0 +1,96 @@
+# Prettier ignore file
+# Files and directories that should not be formatted by Prettier
+
+# Dependencies
+node_modules
+**/node_modules/**
+.pnp
+.pnp.js
+
+# Build outputs
+dist
+build
+agent-control-plane/dist
+**/dist/**
+**/build/**
+*.tgz
+
+# Coverage and test results
+coverage
+.nyc_output
+test-reports
+test-results
+**/coverage/**
+
+# Cache directories
+.cache
+.parcel-cache
+.next
+.nuxt
+.vuepress/dist
+.serverless
+.fusebox
+.dynamodb
+.tern-port
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Generated files
+*.d.ts
+wasm
+pkg
+open-lovable
+
+# Lock files (don't format these)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Swarm and memory files
+.swarm
+**/.swarm/**
+
+# Minified files
+*.min.js
+*.min.css
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Documentation builds
+docs/.vitepress/cache
+docs/.vitepress/dist
+
+# Helm chart templates (Go templates with {{ }} syntax)
+charts/**/templates/**
+**/helm/**/templates/**
+
+# Example configs directory (has its own package.json and config)
+examples/configs/**

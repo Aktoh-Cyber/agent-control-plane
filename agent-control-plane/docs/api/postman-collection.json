@@ -1,0 +1,545 @@
+{
+  "info": {
+    "name": "Agentic Flow API",
+    "description": "Production-ready AI agent orchestration platform with 66 specialized agents, 213 MCP tools, and autonomous multi-agent swarms.",
+    "version": "1.10.3",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{api_key}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api.agent-control-plane.io",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "your-api-key-here",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Agents",
+      "item": [
+        {
+          "name": "List All Agents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/agents",
+              "host": ["{{base_url}}"],
+              "path": ["api", "agents"]
+            },
+            "description": "Get a list of all 66+ available agents with their capabilities"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Agent Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/agents/coder",
+              "host": ["{{base_url}}"],
+              "path": ["api", "agents", "coder"]
+            },
+            "description": "Get detailed information about a specific agent"
+          },
+          "response": []
+        },
+        {
+          "name": "Execute Agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent\": \"coder\",\n  \"task\": \"Build a REST API with authentication\",\n  \"model\": \"claude-sonnet-4-5-20250929\",\n  \"provider\": \"anthropic\",\n  \"stream\": false,\n  \"maxTokens\": 4096\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/agents/execute",
+              "host": ["{{base_url}}"],
+              "path": ["api", "agents", "execute"]
+            },
+            "description": "Execute an agent with a specific task"
+          },
+          "response": []
+        },
+        {
+          "name": "Execute Agent (Streaming)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent\": \"coder\",\n  \"task\": \"Build a REST API\",\n  \"stream\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/agents/execute/stream",
+              "host": ["{{base_url}}"],
+              "path": ["api", "agents", "execute", "stream"]
+            },
+            "description": "Execute agent with real-time streaming output"
+          },
+          "response": []
+        },
+        {
+          "name": "Batch Execute Agents",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tasks\": [\n    {\n      \"agent\": \"researcher\",\n      \"task\": \"Research REST API best practices\"\n    },\n    {\n      \"agent\": \"coder\",\n      \"task\": \"Implement the API\"\n    },\n    {\n      \"agent\": \"tester\",\n      \"task\": \"Write tests\"\n    }\n  ],\n  \"maxConcurrency\": 3,\n  \"failFast\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/agents/batch",
+              "host": ["{{base_url}}"],
+              "path": ["api", "agents", "batch"]
+            },
+            "description": "Execute multiple agents in parallel"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "MCP Tools",
+      "item": [
+        {
+          "name": "List All MCP Tools",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/mcp/tools?package=all",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mcp", "tools"],
+              "query": [
+                {
+                  "key": "package",
+                  "value": "all"
+                }
+              ]
+            },
+            "description": "Get a list of all 213+ MCP tools"
+          },
+          "response": []
+        },
+        {
+          "name": "Get MCP Tool Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/mcp/tools/agentic_flow_agent",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mcp", "tools", "agentic_flow_agent"]
+            },
+            "description": "Get detailed schema for a specific MCP tool"
+          },
+          "response": []
+        },
+        {
+          "name": "Execute MCP Tool",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"toolName\": \"agentic_flow_agent\",\n  \"parameters\": {\n    \"agent\": \"coder\",\n    \"task\": \"Build a REST API\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mcp/tools/execute",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mcp", "tools", "execute"]
+            },
+            "description": "Execute a Model Context Protocol tool"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('jwt_token', jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"secure_password\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login and get JWT token"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"ref_1234567890abcdef\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Refresh JWT token"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/session",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "session"]
+            },
+            "description": "Validate current session"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Logout and invalidate session"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Billing",
+      "item": [
+        {
+          "name": "Create Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user_123\",\n  \"tier\": \"professional\",\n  \"billingCycle\": \"monthly\",\n  \"paymentMethodId\": \"pm_1234567890\",\n  \"couponCode\": \"LAUNCH25\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/billing/subscriptions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "billing", "subscriptions"]
+            },
+            "description": "Create a new subscription"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Subscription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/billing/subscriptions/{{subscription_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "billing", "subscriptions", "{{subscription_id}}"]
+            },
+            "description": "Get subscription details"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/billing/subscriptions/{{subscription_id}}?immediate=false",
+              "host": ["{{base_url}}"],
+              "path": ["api", "billing", "subscriptions", "{{subscription_id}}"],
+              "query": [
+                {
+                  "key": "immediate",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "Cancel subscription"
+          },
+          "response": []
+        },
+        {
+          "name": "Record Usage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subscriptionId\": \"sub_1234567890\",\n  \"userId\": \"user_123\",\n  \"metric\": \"agent_hours\",\n  \"amount\": 2.5,\n  \"unit\": \"hours\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/billing/usage",
+              "host": ["{{base_url}}"],
+              "path": ["api", "billing", "usage"]
+            },
+            "description": "Record usage for metered billing"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Memory",
+      "item": [
+        {
+          "name": "Store Memory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"auth_implementation_pattern\",\n  \"value\": \"JWT authentication with refresh tokens works best for stateless APIs\",\n  \"metadata\": {\n    \"category\": \"authentication\",\n    \"confidence\": 0.95\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/memory/store",
+              "host": ["{{base_url}}"],
+              "path": ["api", "memory", "store"]
+            },
+            "description": "Store information in ReasoningBank"
+          },
+          "response": []
+        },
+        {
+          "name": "Retrieve Memory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"How to implement authentication in REST API?\",\n  \"limit\": 5,\n  \"threshold\": 0.7\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/memory/retrieve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "memory", "retrieve"]
+            },
+            "description": "Semantic search in ReasoningBank"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Swarm",
+      "item": [
+        {
+          "name": "Initialize Swarm",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"topology\": \"mesh\",\n  \"maxAgents\": 10,\n  \"consensusProtocol\": \"raft\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/swarm/init",
+              "host": ["{{base_url}}"],
+              "path": ["api", "swarm", "init"]
+            },
+            "description": "Initialize a multi-agent swarm"
+          },
+          "response": []
+        },
+        {
+          "name": "Spawn Agent in Swarm",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agentType\": \"coder\",\n  \"role\": \"implementation\",\n  \"capabilities\": [\"coding\", \"testing\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/swarm/{{swarm_id}}/agents",
+              "host": ["{{base_url}}"],
+              "path": ["api", "swarm", "{{swarm_id}}", "agents"]
+            },
+            "description": "Add an agent to a swarm"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "GitHub",
+      "item": [
+        {
+          "name": "Analyze Repository",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"repository\": \"Aktoh-Cyber/agent-control-plane\",\n  \"depth\": \"medium\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/github/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["api", "github", "analyze"]
+            },
+            "description": "Analyze a GitHub repository"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

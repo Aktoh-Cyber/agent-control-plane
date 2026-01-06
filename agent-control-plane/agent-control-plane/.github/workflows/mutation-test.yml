@@ -1,0 +1,293 @@
+name: Mutation Testing
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'agent-control-plane/src/security/**'
+      - 'agent-control-plane/src/config/**'
+      - 'agent-control-plane/src/errors/**'
+      - 'agent-control-plane/src/reasoningbank/**'
+      - 'agent-control-plane/tests/**'
+      - 'stryker.conf.json'
+      - '.github/workflows/mutation-test.yml'
+
+  schedule:
+    # Run full mutation tests weekly on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Mutation test mode'
+        required: true
+        default: 'incremental'
+        type: choice
+        options:
+          - incremental
+          - full
+          - security-only
+
+jobs:
+  mutation-test:
+    name: Run Mutation Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for incremental mode
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm install --save-dev @stryker-mutator/core @stryker-mutator/typescript-checker @stryker-mutator/jest-runner
+
+      - name: Setup environment
+        run: |
+          mkdir -p test-reports/mutation
+          echo "MUTATION_MODE=${{ github.event.inputs.mode || (github.event_name == 'schedule' && 'full' || 'incremental') }}" >> $GITHUB_ENV
+
+      - name: Restore incremental cache
+        if: env.MUTATION_MODE == 'incremental'
+        uses: actions/cache@v3
+        with:
+          path: .stryker-tmp/incremental.json
+          key: stryker-incremental-${{ github.sha }}
+          restore-keys: |
+            stryker-incremental-
+
+      - name: Run incremental mutation tests
+        if: env.MUTATION_MODE == 'incremental'
+        run: |
+          echo "🧬 Running incremental mutation tests..."
+          npx stryker run --incremental || true
+
+      - name: Run full mutation tests
+        if: env.MUTATION_MODE == 'full'
+        run: |
+          echo "🧬 Running full mutation test suite..."
+          ./scripts/run-mutation-tests.sh || true
+
+      - name: Run security-only mutation tests
+        if: env.MUTATION_MODE == 'security-only'
+        run: |
+          echo "🧬 Running security module mutation tests..."
+          npx stryker run --mutate "agent-control-plane/src/security/**/*.ts" || true
+
+      - name: Parse mutation results
+        id: mutation_results
+        if: always()
+        run: |
+          if [ -f "test-reports/mutation/mutation-report.json" ]; then
+            SCORE=$(node -e "
+              const fs = require('fs');
+              try {
+                const report = JSON.parse(fs.readFileSync('test-reports/mutation/mutation-report.json', 'utf8'));
+                const score = report.mutationScore || report.thresholds?.mutationScore || 0;
+                console.log(score);
+              } catch (e) {
+                console.log('0');
+              }
+            ")
+            echo "mutation_score=$SCORE" >> $GITHUB_OUTPUT
+
+            KILLED=$(node -e "
+              const fs = require('fs');
+              try {
+                const report = JSON.parse(fs.readFileSync('test-reports/mutation/mutation-report.json', 'utf8'));
+                const files = report.files || {};
+                const killed = Object.values(files).reduce((sum, file) => {
+                  return sum + (file.mutants?.filter(m => m.status === 'Killed').length || 0);
+                }, 0);
+                console.log(killed);
+              } catch (e) {
+                console.log('0');
+              }
+            ")
+            echo "killed=$KILLED" >> $GITHUB_OUTPUT
+
+            SURVIVED=$(node -e "
+              const fs = require('fs');
+              try {
+                const report = JSON.parse(fs.readFileSync('test-reports/mutation/mutation-report.json', 'utf8'));
+                const files = report.files || {};
+                const survived = Object.values(files).reduce((sum, file) => {
+                  return sum + (file.mutants?.filter(m => m.status === 'Survived').length || 0);
+                }, 0);
+                console.log(survived);
+              } catch (e) {
+                console.log('0');
+              }
+            ")
+            echo "survived=$SURVIVED" >> $GITHUB_OUTPUT
+
+            echo "Results parsed: Score=$SCORE%, Killed=$KILLED, Survived=$SURVIVED"
+          else
+            echo "mutation_score=0" >> $GITHUB_OUTPUT
+            echo "killed=0" >> $GITHUB_OUTPUT
+            echo "survived=0" >> $GITHUB_OUTPUT
+            echo "No mutation report found"
+          fi
+
+      - name: Upload mutation report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutation-report-${{ github.sha }}
+          path: |
+            test-reports/mutation/
+            .stryker-tmp/
+          retention-days: 30
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const mutationScore = '${{ steps.mutation_results.outputs.mutation_score }}';
+            const killed = '${{ steps.mutation_results.outputs.killed }}';
+            const survived = '${{ steps.mutation_results.outputs.survived }}';
+
+            const threshold = 75;
+            const status = parseFloat(mutationScore) >= threshold ? '✅' : '⚠️';
+            const statusText = parseFloat(mutationScore) >= threshold
+              ? 'Meets threshold'
+              : 'Below threshold';
+
+            const comment = `
+            ## 🧬 Mutation Testing Results
+
+            ${status} **Mutation Score**: ${mutationScore}% (Threshold: ${threshold}%)
+
+            ### Metrics
+            - **Killed Mutants**: ${killed}
+            - **Survived Mutants**: ${survived}
+            - **Status**: ${statusText}
+
+            ### Analysis
+            ${parseFloat(mutationScore) >= 90 ? '🌟 Excellent test coverage! Tests are highly effective.' : ''}
+            ${parseFloat(mutationScore) >= 80 && parseFloat(mutationScore) < 90 ? '👍 Good test coverage. Consider strengthening edge case tests.' : ''}
+            ${parseFloat(mutationScore) >= 75 && parseFloat(mutationScore) < 80 ? '⚠️ Acceptable coverage. Some test improvements needed.' : ''}
+            ${parseFloat(mutationScore) < 75 ? '❌ Test coverage needs improvement. Review survived mutants.' : ''}
+
+            <details>
+            <summary>View Full Report</summary>
+
+            [Download Mutation Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            ### Recommendations
+            - Review survived mutants in the HTML report
+            - Add tests for boundary conditions
+            - Strengthen logical branch coverage
+            - Test error handling paths
+
+            </details>
+
+            ---
+            *Mutation testing powered by [Stryker](https://stryker-mutator.io)*
+            `;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+
+      - name: Check mutation threshold
+        if: github.event_name == 'pull_request'
+        run: |
+          SCORE="${{ steps.mutation_results.outputs.mutation_score }}"
+          THRESHOLD=75
+
+          echo "Mutation Score: $SCORE%"
+          echo "Threshold: $THRESHOLD%"
+
+          if (( $(echo "$SCORE < $THRESHOLD" | bc -l) )); then
+            echo "❌ Mutation score $SCORE% is below threshold $THRESHOLD%"
+            echo "Review the mutation report to identify weak test coverage"
+            exit 1
+          else
+            echo "✅ Mutation score $SCORE% meets or exceeds threshold $THRESHOLD%"
+          fi
+
+      - name: Store results summary
+        if: always()
+        run: |
+          cat > test-reports/mutation/summary.txt << EOF
+          Mutation Testing Summary
+          ========================
+          Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          Mode: ${{ env.MUTATION_MODE }}
+          Commit: ${{ github.sha }}
+          Score: ${{ steps.mutation_results.outputs.mutation_score }}%
+          Killed: ${{ steps.mutation_results.outputs.killed }}
+          Survived: ${{ steps.mutation_results.outputs.survived }}
+          Status: ${{ steps.mutation_results.outputs.mutation_score >= 75 && 'PASS' || 'FAIL' }}
+          EOF
+
+          cat test-reports/mutation/summary.txt
+
+      - name: Post to Slack (on failure)
+        if: failure() && github.event_name == 'schedule'
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "🧬 Mutation Testing Alert",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "⚠️ Mutation Testing Failed"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Repository:*\n${{ github.repository }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Mutation Score:*\n${{ steps.mutation_results.outputs.mutation_score }}%"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Threshold:*\n75%"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Survived Mutants:*\n${{ steps.mutation_results.outputs.survived }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Report"
+                      },
+                      "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
