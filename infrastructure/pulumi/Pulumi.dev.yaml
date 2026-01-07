@@ -4,6 +4,7 @@ config:
   agent-control-plane:clusterName: acp-dev
   agent-control-plane:vpcCidr: 10.0.0.0/16
   agent-control-plane:nodeInstanceType: t3.medium
-  agent-control-plane:desiredCapacity: 2
-  agent-control-plane:minSize: 1
-  agent-control-plane:maxSize: 5
+  agent-control-plane:desiredCapacity: '2'
+  agent-control-plane:minSize: '1'
+  agent-control-plane:maxSize: '5'
+encryptionsalt: v1:Q8zXUQpl8lw=:v1:00ZP6B4JUhizXp8v:k1bB8KIsXOs9NZTkDfaAN1a/at+0bg==
