@@ -1,0 +1,16 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+
+# Pulumi local state (when using local backend)
+.pulumi/
+
+# Environment files
+.env
+.env.*
+
+# Secrets
+*.pem
+*.key
