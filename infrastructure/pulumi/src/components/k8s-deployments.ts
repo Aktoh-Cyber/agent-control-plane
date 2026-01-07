@@ -199,8 +199,8 @@ export function createK8sDeployments(
           'alb.ingress.kubernetes.io/target-type': 'ip',
           'alb.ingress.kubernetes.io/healthcheck-path': '/health',
           'alb.ingress.kubernetes.io/healthcheck-port': '8444',
-          'alb.ingress.kubernetes.io/listen-ports': '[{"HTTP": 80}, {"HTTPS": 443}]',
-          'alb.ingress.kubernetes.io/ssl-redirect': '443',
+          // HTTP only for dev - add certificate for HTTPS in prod
+          'alb.ingress.kubernetes.io/listen-ports': '[{"HTTP": 80}]',
           // WebSocket support
           'alb.ingress.kubernetes.io/target-group-attributes':
             'stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=3600',

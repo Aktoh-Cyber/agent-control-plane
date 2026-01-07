@@ -17,24 +17,74 @@ export function createEksCluster(
   publicSubnetIds: pulumi.Output<string[]>,
   privateSubnetIds: pulumi.Output<string[]>
 ): EksResult {
-  // Create EKS cluster
+  // Create IAM Role for EKS Node Group
+  const nodeGroupRole = new aws.iam.Role(`${infraConfig.clusterName}-nodegroup-role`, {
+    assumeRolePolicy: JSON.stringify({
+      Version: '2012-10-17',
+      Statement: [
+        {
+          Effect: 'Allow',
+          Principal: {
+            Service: 'ec2.amazonaws.com',
+          },
+          Action: 'sts:AssumeRole',
+        },
+      ],
+    }),
+    tags: commonTags,
+  });
+
+  // Attach required managed policies for EKS node group
+  const nodeGroupPolicies = [
+    'arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy',
+    'arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy',
+    'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly',
+  ];
+
+  nodeGroupPolicies.forEach((policyArn, index) => {
+    new aws.iam.RolePolicyAttachment(`${infraConfig.clusterName}-nodegroup-policy-${index}`, {
+      role: nodeGroupRole.name,
+      policyArn: policyArn,
+    });
+  });
+
+  // Create EKS cluster with managed node groups (instead of deprecated Launch Configurations)
   const cluster = new eks.Cluster(infraConfig.clusterName, {
     name: infraConfig.clusterName,
     vpcId: vpcId,
     publicSubnetIds: publicSubnetIds,
     privateSubnetIds: privateSubnetIds,
-    instanceType: infraConfig.nodeInstanceType,
-    desiredCapacity: infraConfig.desiredCapacity,
-    minSize: infraConfig.minSize,
-    maxSize: infraConfig.maxSize,
-    nodeAssociatePublicIpAddress: false,
+    // Use managed node groups instead of self-managed nodes (AWS deprecated Launch Configurations)
+    skipDefaultNodeGroup: true,
+    // Register the node role so the cluster can authorize nodes
+    instanceRoles: [nodeGroupRole],
     endpointPrivateAccess: true,
     endpointPublicAccess: true,
     version: '1.29',
     enabledClusterLogTypes: ['api', 'audit', 'authenticator', 'controllerManager', 'scheduler'],
     tags: commonTags,
-    nodeRootVolumeSize: 50,
     createOidcProvider: true,
+  });
+
+  // Create EKS Managed Node Group (uses Launch Templates instead of deprecated Launch Configurations)
+  const managedNodeGroup = new eks.ManagedNodeGroup(`${infraConfig.clusterName}-ng`, {
+    cluster: cluster,
+    nodeGroupName: `${infraConfig.clusterName}-managed-ng`,
+    nodeRole: nodeGroupRole,
+    instanceTypes: [infraConfig.nodeInstanceType],
+    scalingConfig: {
+      desiredSize: infraConfig.desiredCapacity,
+      minSize: infraConfig.minSize,
+      maxSize: infraConfig.maxSize,
+    },
+    subnetIds: privateSubnetIds,
+    diskSize: 50,
+    amiType: 'AL2023_x86_64_STANDARD', // Amazon Linux 2023
+    capacityType: 'ON_DEMAND',
+    labels: {
+      'nodegroup-type': 'managed',
+    },
+    tags: commonTags,
   });
 
   // Get OIDC provider for IRSA (IAM Roles for Service Accounts)
@@ -95,6 +145,7 @@ export function createAlbIngressRole(
             'ec2:DescribeAvailabilityZones',
             'ec2:DescribeInternetGateways',
             'ec2:DescribeVpcs',
+            'ec2:DescribeVpcPeeringConnections',
             'ec2:DescribeSubnets',
             'ec2:DescribeSecurityGroups',
             'ec2:DescribeInstances',
@@ -102,6 +153,7 @@ export function createAlbIngressRole(
             'ec2:DescribeTags',
             'ec2:GetCoipPoolUsage',
             'ec2:DescribeCoipPools',
+            'ec2:GetSecurityGroupsForVpc',
             'elasticloadbalancing:*',
             'cognito-idp:DescribeUserPoolClient',
             'acm:ListCertificates',
