@@ -1,0 +1,9 @@
+config:
+  aws:region: us-west-2
+  agent-control-plane:environment: dev
+  agent-control-plane:clusterName: acp-dev
+  agent-control-plane:vpcCidr: 10.0.0.0/16
+  agent-control-plane:nodeInstanceType: t3.medium
+  agent-control-plane:desiredCapacity: 2
+  agent-control-plane:minSize: 1
+  agent-control-plane:maxSize: 5
