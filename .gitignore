@@ -3,6 +3,9 @@
 .env.local
 .env*.local
 
+# Deployment details (contains environment-specific info)
+DEPLOYMENT_DETAILS.md
+
 # Rust build artifacts
 target/
 **/*.rs.bk

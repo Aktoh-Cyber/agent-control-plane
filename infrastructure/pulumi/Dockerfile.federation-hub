@@ -1,0 +1,32 @@
+FROM node:20-slim
+
+# Install build tools needed for native modules (better-sqlite3)
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy everything needed for install from agent-control-plane subdirectory
+COPY agent-control-plane/package*.json ./
+COPY agent-control-plane/scripts ./scripts
+
+# Install production dependencies (allow scripts for native module compilation)
+RUN npm ci --omit=dev || npm install --omit=dev
+
+# Copy built distribution
+COPY agent-control-plane/dist ./dist
+
+# Create data directory for database
+RUN mkdir -p /data
+
+# Expose ports (WebSocket + Health Check)
+EXPOSE 8443 8444
+
+# Copy standalone hub server
+COPY agent-control-plane/docker/federation-test/standalone-hub.js ./docker/federation-test/
+
+# Run standalone hub server
+CMD ["node", "--experimental-specifier-resolution=node", "docker/federation-test/standalone-hub.js"]
