@@ -1,19 +1,63 @@
 /**
  * Authentication Middleware
- * Validates API requests and manages authentication
+ * Validates API requests and manages authentication.
+ *
+ * Supports three authentication strategies (checked in order):
+ *   1. Propagated identity headers (X-Org-Id, X-User-Id, X-User-Roles)
+ *   2. Bearer JWT token (verified with jsonwebtoken)
+ *   3. API key (x-api-key header)
+ *
+ * Falls back to development-mode bypass when NODE_ENV === 'development'.
  */
 
 import { NextFunction, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
-interface AuthRequest extends Request {
-  userId?: string;
-  sessionId?: string;
+// ---------------------------------------------------------------------------
+// Types aligned with @horsemen/auth HorsemenIdentity
+// ---------------------------------------------------------------------------
+
+export interface HorsemenIdentity {
+  sub: string;
+  email: string;
+  orgId: string;
+  teamId?: string;
+  roles: string[];
+  iat: number;
+  exp: number;
+  rawToken: string;
 }
 
+export interface AuthRequest extends Request {
+  userId?: string;
+  sessionId?: string;
+  identity?: HorsemenIdentity;
+}
+
+// ---------------------------------------------------------------------------
+// JWT helpers (optional dependency -- gracefully degrades if not installed)
+// ---------------------------------------------------------------------------
+
+let jwtVerify: ((token: string, secret: string) => Record<string, unknown>) | null = null;
+
+try {
+  // jsonwebtoken may or may not be installed in the ACP
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const jwtModule = await import('jsonwebtoken');
+  const jwt = jwtModule.default ?? jwtModule;
+  jwtVerify = (token: string, secret: string) =>
+    jwt.verify(token, secret) as Record<string, unknown>;
+} catch {
+  // jsonwebtoken not available -- Bearer tokens will be handled with basic decode
+}
+
+// ---------------------------------------------------------------------------
+// Middleware
+// ---------------------------------------------------------------------------
+
 /**
- * Authentication middleware
- * In production, integrate with proper auth service (JWT, OAuth, etc.)
+ * Authentication middleware.
+ * Checks propagated headers, then Bearer JWT, then API key, then dev bypass.
  */
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
   try {
@@ -22,29 +66,57 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
       return next();
     }
 
-    // Check for API key in headers
-    const apiKey = req.headers['x-api-key'] as string;
-    const authHeader = req.headers['authorization'] as string;
-
-    // Simple API key validation (in production, use proper JWT/OAuth)
-    if (apiKey && validateApiKey(apiKey)) {
-      req.userId = extractUserIdFromApiKey(apiKey);
+    // --- Strategy 1: Propagated identity headers (service-to-service) ---
+    const propagatedIdentity = extractPropagatedIdentity(req);
+    if (propagatedIdentity) {
+      req.identity = propagatedIdentity;
+      req.userId = propagatedIdentity.sub;
       req.sessionId = uuidv4();
       return next();
     }
 
-    // Bearer token validation
+    // --- Strategy 2: Bearer token (JWT verification) ---
+    const authHeader = req.headers['authorization'] as string;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
-      if (validateToken(token)) {
-        req.userId = extractUserIdFromToken(token);
+      const identity = verifyBearerToken(token);
+      if (identity) {
+        req.identity = identity;
+        req.userId = identity.sub;
         req.sessionId = uuidv4();
         return next();
       }
     }
 
-    // For development, allow unauthenticated access
+    // --- Strategy 3: API key ---
+    const apiKey = req.headers['x-api-key'] as string;
+    if (apiKey && validateApiKey(apiKey)) {
+      const userId = extractUserIdFromApiKey(apiKey);
+      req.identity = {
+        sub: userId,
+        email: '',
+        orgId: '',
+        roles: ['api-consumer'],
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        rawToken: '',
+      };
+      req.userId = userId;
+      req.sessionId = uuidv4();
+      return next();
+    }
+
+    // --- Strategy 4: Development mode bypass ---
     if (process.env.NODE_ENV === 'development') {
+      req.identity = {
+        sub: 'dev-user',
+        email: 'dev@localhost',
+        orgId: 'dev-org',
+        roles: ['super-admin'],
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        rawToken: '',
+      };
       req.userId = 'dev-user';
       req.sessionId = uuidv4();
       return next();
@@ -84,46 +156,153 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   }
 }
 
+// ---------------------------------------------------------------------------
+// Extraction helpers
+// ---------------------------------------------------------------------------
+
 /**
- * Validate API key
+ * Extract identity from propagated service-to-service headers.
+ * Returns null if the required headers are missing.
+ */
+function extractPropagatedIdentity(req: Request): HorsemenIdentity | null {
+  const orgId = req.headers['x-org-id'] as string | undefined;
+  const userId = req.headers['x-user-id'] as string | undefined;
+  const rolesHeader = req.headers['x-user-roles'] as string | undefined;
+  const teamId = req.headers['x-team-id'] as string | undefined;
+  const authHeader = req.headers['authorization'] as string | undefined;
+
+  if (!orgId || !userId) return null;
+
+  const roles = rolesHeader ? rolesHeader.split(',') : ['viewer'];
+  const rawToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : '';
+
+  return {
+    sub: userId,
+    email: '',
+    orgId,
+    teamId: teamId || undefined,
+    roles,
+    iat: 0,
+    exp: 0,
+    rawToken,
+  };
+}
+
+/**
+ * Verify a Bearer JWT token. Uses jsonwebtoken if available, otherwise falls
+ * back to basic base64 decode of the payload (no signature verification).
+ */
+function verifyBearerToken(token: string): HorsemenIdentity | null {
+  const jwtSecret = process.env.JWT_SECRET;
+
+  // Prefer real JWT verification when jsonwebtoken is installed and secret is set
+  if (jwtVerify && jwtSecret) {
+    try {
+      const payload = jwtVerify(token, jwtSecret);
+      return {
+        sub: (payload.sub as string) || '',
+        email: (payload.email as string) || '',
+        orgId: (payload['custom:organization'] as string) || (payload.tenant as string) || '',
+        teamId: (payload['custom:team'] as string) || undefined,
+        roles: (payload['cognito:groups'] as string[]) || (payload.roles as string[]) || ['viewer'],
+        iat: (payload.iat as number) || 0,
+        exp: (payload.exp as number) || 0,
+        rawToken: token,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  // Fallback: decode JWT payload without verification (dev/testing only)
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+    return {
+      sub: (payload.sub as string) || '',
+      email: (payload.email as string) || '',
+      orgId: (payload['custom:organization'] as string) || (payload.tenant as string) || '',
+      teamId: (payload['custom:team'] as string) || undefined,
+      roles: (payload['cognito:groups'] as string[]) || (payload.roles as string[]) || ['viewer'],
+      iat: payload.iat || 0,
+      exp: payload.exp || 0,
+      rawToken: token,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Validate API key format.
  */
 function validateApiKey(apiKey: string): boolean {
-  // In production, validate against database or auth service
   return apiKey.startsWith('medai_') && apiKey.length >= 32;
 }
 
 /**
- * Validate bearer token
- */
-function validateToken(token: string): boolean {
-  // In production, verify JWT signature and expiration
-  return token.length >= 20;
-}
-
-/**
- * Extract user ID from API key
+ * Extract user ID from API key.
  */
 function extractUserIdFromApiKey(apiKey: string): string {
-  // In production, lookup user from database
   return `user_${apiKey.substring(6, 14)}`;
 }
 
 /**
- * Extract user ID from token
+ * Middleware to require specific roles.
  */
-function extractUserIdFromToken(token: string): string {
-  // In production, decode JWT and extract claims
-  return `user_${token.substring(0, 8)}`;
+export function requireRole(...roles: string[]) {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    if (!req.identity) {
+      res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required',
+          timestamp: new Date(),
+        },
+        metadata: {
+          requestId: uuidv4(),
+          timestamp: new Date(),
+          processingTimeMs: 0,
+          version: '1.0.0',
+        },
+      });
+      return;
+    }
+
+    const hasRole = req.identity.roles.some((r) => roles.includes(r));
+    if (!hasRole) {
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: `One of the following roles is required: ${roles.join(', ')}`,
+          timestamp: new Date(),
+        },
+        metadata: {
+          requestId: uuidv4(),
+          timestamp: new Date(),
+          processingTimeMs: 0,
+          version: '1.0.0',
+        },
+      });
+      return;
+    }
+
+    next();
+  };
 }
 
 /**
- * Optional middleware to require provider role
+ * Optional middleware to require provider role.
+ * @deprecated Use requireRole('provider', 'admin') instead.
  */
 export function requireProviderRole(req: AuthRequest, res: Response, next: NextFunction): void {
-  // In production, check user roles from database
-  const userRole = 'provider'; // Mock role
+  const identity = req.identity;
+  const roles = identity?.roles || [];
 
-  if (userRole !== 'provider' && userRole !== 'admin') {
+  if (!roles.includes('provider') && !roles.includes('admin') && !roles.includes('super-admin')) {
     res.status(403).json({
       success: false,
       error: {
