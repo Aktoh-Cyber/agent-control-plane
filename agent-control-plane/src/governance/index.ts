@@ -43,5 +43,45 @@ export type {
   BudgetPeriod,
 } from './budget-manager.js';
 
+// LiteLLM admin client
+export { LiteLLMAdminClient, LiteLLMError, litellmAdmin } from './litellm-admin.js';
+export type { ILiteLLMAdminClient, VirtualKey, VirtualKeyConfig } from './litellm-admin.js';
+// Re-export UsageSummary from litellm-admin under a distinct alias to avoid
+// colliding with the identically-named type from usage-tracker.
+export type { UsageSummary as LiteLLMUsageSummary } from './litellm-admin.js';
+
+// Sensitivity-based routing
+export { SensitivityRouter, sensitivityRouter } from './sensitivity-router.js';
+export type {
+  ISensitivityRouter,
+  Provider,
+  ProviderLocality,
+  RoutingConstraints,
+} from './sensitivity-router.js';
+
+// Routing priority
+export { DEFAULT_WEIGHTS, RoutingPriorityStore, routingPriorityStore } from './routing-priority.js';
+export type { RoutingPriority, RoutingPriorityInput, RoutingWeights } from './routing-priority.js';
+
+// Provider registry
+export {
+  DirectAnthropicProvider,
+  DirectGoogleProvider,
+  DirectOpenAIProvider,
+  LiteLLMProvider,
+  LocalProvider,
+  OpenRouterProvider,
+  ProviderRegistry,
+  providerRegistry,
+} from './provider-registry.js';
+export type {
+  IModelProvider,
+  LLMMessage,
+  LLMRequest,
+  LLMResponse,
+  OrgProviderConfig,
+  ProviderType,
+} from './provider-registry.js';
+
 // API routes
 export { governanceRouter } from './routes.js';
