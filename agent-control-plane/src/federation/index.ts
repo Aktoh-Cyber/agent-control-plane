@@ -32,5 +32,10 @@ export type {
 export { QuotaManager, quotaManager } from './quotas.js';
 export type { QuotaCheckResult, QuotaLimits, QuotaResource, QuotaUsage } from './quotas.js';
 
+// Custom roles
+export { CustomRoleStore, PERMISSIONS, customRoleStore } from './custom-roles.js';
+export type { CreateRoleInput, CustomRole, Permission, UpdateRoleInput } from './custom-roles.js';
+
 // API routes
+export { roleRouter } from './role-routes.js';
 export { federationRouter } from './routes.js';
