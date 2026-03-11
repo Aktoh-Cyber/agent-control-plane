@@ -13,6 +13,10 @@ Integration guides for external services and frameworks.
 - [FastMCP Implementation Plan](fastmcp-implementation-plan.md) - Detailed implementation strategy
 - [FastMCP POC Integration](fastmcp-poc-integration.md) - Proof of concept integration
 
+## Cross-Platform
+
+- [Evolve Integration](EVOLVE_INTEGRATION.md) - Evolve tool generation, inference routing, and orchestration
+
 ## Cloud Platforms
 
 - [Agentic Cloud Integration](FLOW-NEXUS-INTEGRATION.md) - Agentic Cloud cloud platform integration
