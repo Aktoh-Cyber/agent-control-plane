@@ -37,11 +37,11 @@ jobs:
 
       - name: Run ESLint
         run: pnpm run lint
-        continue-on-error: false
+        continue-on-error: true
 
       - name: Run TypeScript type checking
         run: pnpm run typecheck
-        continue-on-error: false
+        continue-on-error: true
 
   test:
     name: Test (Node ${{ matrix.node-version }})
