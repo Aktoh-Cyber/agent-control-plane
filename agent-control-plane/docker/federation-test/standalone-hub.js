@@ -4,7 +4,6 @@
  */
 
 import express from 'express';
-import { initEventBridgePublisher } from '../../dist/audit/index.js';
 import { FederationHubServer } from '../../dist/federation/FederationHubServer.js';
 
 const PORT = parseInt(process.env.FEDERATION_HUB_PORT || process.env.HUB_PORT || '8443');
@@ -55,7 +54,13 @@ async function main() {
     });
 
     // Initialize EventBridge publisher (opt-in via EVENTBRIDGE_ENABLED=true)
-    const unsubEB = initEventBridgePublisher();
+    let unsubEB = () => {};
+    try {
+      const { initEventBridgePublisher } = await import('../../dist/audit/index.js');
+      unsubEB = initEventBridgePublisher();
+    } catch (err) {
+      console.warn('[EventBridge] Publisher not available:', err.message);
+    }
 
     console.log('✅ Federation Hub Server is ready!');
     console.log('═'.repeat(60));

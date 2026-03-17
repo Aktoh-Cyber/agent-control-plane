@@ -6,8 +6,8 @@
  */
 
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
-import type { AuditEvent } from './audit-events';
-import { onAuditEvent } from './audit-events';
+import type { AuditEvent } from './audit-events.js';
+import { onAuditEvent } from './audit-events.js';
 
 const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME || 'horsemen-events';
 const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
