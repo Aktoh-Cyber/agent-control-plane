@@ -60,7 +60,9 @@ const albController = installAwsLoadBalancerController(
 const { namespace, federationHubDeployment, federationHubService, ingress } = createK8sDeployments(
   k8sProvider,
   federationHubRepoUrl,
-  agentRepoUrl
+  agentRepoUrl,
+  oidcProviderArn,
+  oidcProviderUrl
 );
 
 // 8. Create HPA for auto-scaling

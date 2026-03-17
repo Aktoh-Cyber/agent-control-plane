@@ -52,3 +52,6 @@ export type { RetentionPolicy, RetentionResult } from './retention.js';
 
 // API routes
 export { auditRouter } from './routes.js';
+
+// EventBridge publisher
+export { initEventBridgePublisher } from './eventbridge-publisher.js';

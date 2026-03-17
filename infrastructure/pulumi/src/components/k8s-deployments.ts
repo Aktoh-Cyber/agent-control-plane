@@ -1,6 +1,7 @@
+import * as aws from '@pulumi/aws';
 import * as k8s from '@pulumi/kubernetes';
 import * as pulumi from '@pulumi/pulumi';
-import { infraConfig } from '../config';
+import { commonTags, infraConfig } from '../config';
 
 export interface K8sDeploymentsResult {
   namespace: k8s.core.v1.Namespace;
@@ -12,7 +13,9 @@ export interface K8sDeploymentsResult {
 export function createK8sDeployments(
   k8sProvider: k8s.Provider,
   federationHubRepoUrl: pulumi.Output<string>,
-  agentRepoUrl: pulumi.Output<string>
+  agentRepoUrl: pulumi.Output<string>,
+  oidcProviderArn?: pulumi.Output<string>,
+  oidcProviderUrl?: pulumi.Output<string>
 ): K8sDeploymentsResult {
   const appLabels = {
     app: 'agent-control-plane',
@@ -31,6 +34,64 @@ export function createK8sDeployments(
     { provider: k8sProvider }
   );
 
+  // IRSA role for EventBridge cross-region access (us-west-2 → us-east-1)
+  let serviceAccountName: pulumi.Output<string> | undefined;
+
+  if (oidcProviderArn && oidcProviderUrl) {
+    const ebRole = new aws.iam.Role('federation-hub-eventbridge-role', {
+      assumeRolePolicy: pulumi.all([oidcProviderArn, oidcProviderUrl]).apply(([arn, url]) =>
+        JSON.stringify({
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Effect: 'Allow',
+              Principal: { Federated: arn },
+              Action: 'sts:AssumeRoleWithWebIdentity',
+              Condition: {
+                StringEquals: {
+                  [`${url}:sub`]: 'system:serviceaccount:agent-control-plane:federation-hub',
+                  [`${url}:aud`]: 'sts.amazonaws.com',
+                },
+              },
+            },
+          ],
+        })
+      ),
+      tags: commonTags,
+    });
+
+    new aws.iam.RolePolicy('federation-hub-eventbridge-policy', {
+      role: ebRole.id,
+      policy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Action: ['events:PutEvents'],
+            Resource:
+              'arn:aws:events:us-east-1:047857295772:event-bus/horsemen-production-horsemen-events',
+          },
+        ],
+      }),
+    });
+
+    const sa = new k8s.core.v1.ServiceAccount(
+      'federation-hub-sa',
+      {
+        metadata: {
+          name: 'federation-hub',
+          namespace: namespace.metadata.name,
+          annotations: {
+            'eks.amazonaws.com/role-arn': ebRole.arn,
+          },
+        },
+      },
+      { provider: k8sProvider }
+    );
+
+    serviceAccountName = sa.metadata.name;
+  }
+
   // ConfigMap for federation hub configuration
   const hubConfigMap = new k8s.core.v1.ConfigMap(
     'federation-hub-config',
@@ -46,6 +107,10 @@ export function createK8sDeployments(
         FEDERATION_MAX_AGENTS: '1000',
         DEBUG_LEVEL: 'DETAILED',
         DEBUG_FORMAT: 'json',
+        // EventBridge cross-region config (us-west-2 pods → us-east-1 bus)
+        EVENTBRIDGE_ENABLED: 'true',
+        EVENT_BUS_NAME: 'horsemen-production-horsemen-events',
+        AWS_REGION: 'us-east-1',
       },
     },
     { provider: k8sProvider }
@@ -78,6 +143,7 @@ export function createK8sDeployments(
             },
           },
           spec: {
+            ...(serviceAccountName ? { serviceAccountName } : {}),
             containers: [
               {
                 name: 'federation-hub',
