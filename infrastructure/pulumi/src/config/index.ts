@@ -13,6 +13,7 @@ export interface InfraConfig {
   maxSize: number;
   awsRegion: string;
   awsProfile?: string;
+  certificateArn?: string;
 }
 
 export const infraConfig: InfraConfig = {
@@ -25,6 +26,7 @@ export const infraConfig: InfraConfig = {
   maxSize: config.requireNumber('maxSize'),
   awsRegion: awsConfig.require('region'),
   awsProfile: awsConfig.get('profile'),
+  certificateArn: config.get('certificateArn'),
 };
 
 // Common tags for all resources

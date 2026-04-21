@@ -116,6 +116,28 @@ export function createK8sDeployments(
     { provider: k8sProvider }
   );
 
+  // PVC for federation hub persistent data
+  const hubPvc = new k8s.core.v1.PersistentVolumeClaim(
+    'federation-hub-pvc',
+    {
+      metadata: {
+        name: 'federation-hub-data',
+        namespace: namespace.metadata.name,
+        labels: appLabels,
+      },
+      spec: {
+        accessModes: ['ReadWriteOnce'],
+        storageClassName: 'gp3',
+        resources: {
+          requests: {
+            storage: '10Gi',
+          },
+        },
+      },
+    },
+    { provider: k8sProvider }
+  );
+
   // Federation Hub Deployment
   const federationHubDeployment = new k8s.apps.v1.Deployment(
     'federation-hub',
@@ -206,7 +228,9 @@ export function createK8sDeployments(
             volumes: [
               {
                 name: 'data',
-                emptyDir: {},
+                persistentVolumeClaim: {
+                  claimName: 'federation-hub-data',
+                },
               },
             ],
           },
@@ -265,8 +289,12 @@ export function createK8sDeployments(
           'alb.ingress.kubernetes.io/target-type': 'ip',
           'alb.ingress.kubernetes.io/healthcheck-path': '/health',
           'alb.ingress.kubernetes.io/healthcheck-port': '8444',
-          // HTTP only for dev - add certificate for HTTPS in prod
-          'alb.ingress.kubernetes.io/listen-ports': '[{"HTTP": 80}]',
+          // HTTPS with TLS 1.3, HTTP redirects to HTTPS
+          'alb.ingress.kubernetes.io/listen-ports': '[{"HTTP": 80}, {"HTTPS": 443}]',
+          'alb.ingress.kubernetes.io/ssl-redirect': '443',
+          'alb.ingress.kubernetes.io/ssl-policy': 'ELBSecurityPolicy-TLS13-1-2-2021-06',
+          // ACM certificate ARN — set via Pulumi config: `pulumi config set agent-control-plane:certificateArn <arn>`
+          'alb.ingress.kubernetes.io/certificate-arn': infraConfig.certificateArn ?? '',
           // WebSocket support
           'alb.ingress.kubernetes.io/target-group-attributes':
             'stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=3600',
@@ -363,6 +391,31 @@ export function createHpa(
             },
           },
         ],
+      },
+    },
+    { provider: k8sProvider }
+  );
+}
+
+// PodDisruptionBudget ensures at least 1 federation-hub pod during voluntary disruptions
+export function createPdb(
+  k8sProvider: k8s.Provider,
+  namespace: k8s.core.v1.Namespace
+): k8s.policy.v1.PodDisruptionBudget {
+  return new k8s.policy.v1.PodDisruptionBudget(
+    'federation-hub-pdb',
+    {
+      metadata: {
+        name: 'federation-hub-pdb',
+        namespace: namespace.metadata.name,
+      },
+      spec: {
+        minAvailable: 1,
+        selector: {
+          matchLabels: {
+            app: 'federation-hub',
+          },
+        },
       },
     },
     { provider: k8sProvider }
