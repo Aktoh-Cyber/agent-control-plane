@@ -24,7 +24,12 @@
  */
 
 import express, { type Request, type Response, type Router } from 'express';
-import { organizationStore, type OrgRole, type OrgTier } from './organizations.js';
+import {
+  organizationStore,
+  type OrgRole,
+  type OrgSettings,
+  type OrgTier,
+} from './organizations.js';
 import { quotaManager, type QuotaLimits } from './quotas.js';
 
 // ---------------------------------------------------------------------------
@@ -58,12 +63,10 @@ function isSuperAdmin(roles: string[]): boolean {
 function requireAuth(req: Request, res: Response): HorsemenIdentity | null {
   const identity = getIdentity(req);
   if (!identity) {
-    res
-      .status(401)
-      .json({
-        success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
-      });
+    res.status(401).json({
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    });
     return null;
   }
   return identity;
@@ -72,12 +75,10 @@ function requireAuth(req: Request, res: Response): HorsemenIdentity | null {
 /** Send 403 and return false if identity lacks admin role. */
 function requireAdmin(identity: HorsemenIdentity, res: Response): boolean {
   if (!isAdmin(identity.roles)) {
-    res
-      .status(403)
-      .json({
-        success: false,
-        error: { code: 'FORBIDDEN', message: 'org-admin role or higher required' },
-      });
+    res.status(403).json({
+      success: false,
+      error: { code: 'FORBIDDEN', message: 'org-admin role or higher required' },
+    });
     return false;
   }
   return true;
@@ -112,22 +113,18 @@ export function federationRouter(): Router {
 
     const body = req.body as { name?: string; tier?: OrgTier; parentOrgId?: string };
     if (!body.name || typeof body.name !== 'string') {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: 'BAD_REQUEST', message: 'name (string) is required' },
-        });
+      res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: 'name (string) is required' },
+      });
       return;
     }
     const tier = body.tier ?? 'free';
     if (!VALID_TIERS.includes(tier)) {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: 'BAD_REQUEST', message: `tier must be one of: ${VALID_TIERS.join(', ')}` },
-        });
+      res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: `tier must be one of: ${VALID_TIERS.join(', ')}` },
+      });
       return;
     }
 
@@ -190,14 +187,12 @@ export function federationRouter(): Router {
       return;
     }
 
-    const body = req.body as { name?: string; tier?: OrgTier; settings?: Record<string, unknown> };
+    const body = req.body as { name?: string; tier?: OrgTier; settings?: OrgSettings };
     if (body.tier && !VALID_TIERS.includes(body.tier)) {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: 'BAD_REQUEST', message: `tier must be one of: ${VALID_TIERS.join(', ')}` },
-        });
+      res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: `tier must be one of: ${VALID_TIERS.join(', ')}` },
+      });
       return;
     }
     const org = organizationStore.updateOrg(req.params.id, body);
@@ -236,12 +231,10 @@ export function federationRouter(): Router {
 
     const body = req.body as { name?: string; description?: string };
     if (!body.name || typeof body.name !== 'string') {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: 'BAD_REQUEST', message: 'name (string) is required' },
-        });
+      res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: 'name (string) is required' },
+      });
       return;
     }
     const team = organizationStore.createTeam(req.params.id, body.name, body.description ?? '');
@@ -276,46 +269,38 @@ export function federationRouter(): Router {
 
     const body = req.body as { userId?: string; role?: OrgRole; teamId?: string };
     if (!body.userId || typeof body.userId !== 'string') {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: 'BAD_REQUEST', message: 'userId (string) is required' },
-        });
+      res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: 'userId (string) is required' },
+      });
       return;
     }
     const role = body.role ?? 'viewer';
     if (!VALID_ROLES.includes(role)) {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: 'BAD_REQUEST', message: `role must be one of: ${VALID_ROLES.join(', ')}` },
-        });
+      res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: `role must be one of: ${VALID_ROLES.join(', ')}` },
+      });
       return;
     }
     try {
       quotaManager.enforceQuota(req.params.id, 'users');
     } catch (err) {
-      res
-        .status(429)
-        .json({
-          success: false,
-          error: { code: 'QUOTA_EXCEEDED', message: (err as Error).message },
-        });
+      res.status(429).json({
+        success: false,
+        error: { code: 'QUOTA_EXCEEDED', message: (err as Error).message },
+      });
       return;
     }
     const member = organizationStore.addMember(req.params.id, body.userId, role, body.teamId);
     if (!member) {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: {
-            code: 'BAD_REQUEST',
-            message: 'Organization not found or member already exists',
-          },
-        });
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'BAD_REQUEST',
+          message: 'Organization not found or member already exists',
+        },
+      });
       return;
     }
     res
@@ -343,12 +328,10 @@ export function federationRouter(): Router {
 
     const body = req.body as { role?: OrgRole };
     if (!body.role || !VALID_ROLES.includes(body.role)) {
-      res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: 'BAD_REQUEST', message: `role must be one of: ${VALID_ROLES.join(', ')}` },
-        });
+      res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: `role must be one of: ${VALID_ROLES.join(', ')}` },
+      });
       return;
     }
     const member = organizationStore.updateMemberRole(req.params.id, req.params.userId, body.role);

@@ -104,7 +104,7 @@ export class EmbeddingService {
       }),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as { data: { embedding: number[] }[] };
     return new Float32Array(data.data[0].embedding);
   }
 
