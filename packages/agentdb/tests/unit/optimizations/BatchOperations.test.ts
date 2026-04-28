@@ -12,7 +12,8 @@ import { EmbeddingService } from '../../../src/controllers/EmbeddingService.js';
 import { Episode } from '../../../src/controllers/ReflexionMemory.js';
 import { BatchOperations } from '../../../src/optimizations/BatchOperations.js';
 
-const TEST_DB_PATH = './tests/fixtures/test-batch.db';
+const TEST_DB_DIR = path.join(__dirname, '../../../tests/fixtures');
+const TEST_DB_PATH = path.join(TEST_DB_DIR, 'test-batch.db');
 
 describe('BatchOperations', () => {
   let db: Database.Database;
@@ -20,6 +21,11 @@ describe('BatchOperations', () => {
   let batchOps: BatchOperations;
 
   beforeEach(async () => {
+    // Ensure fixtures directory exists
+    if (!fs.existsSync(TEST_DB_DIR)) {
+      fs.mkdirSync(TEST_DB_DIR, { recursive: true });
+    }
+
     // Clean up
     [TEST_DB_PATH, `${TEST_DB_PATH}-wal`, `${TEST_DB_PATH}-shm`].forEach((file) => {
       if (fs.existsSync(file)) fs.unlinkSync(file);
@@ -54,7 +60,7 @@ describe('BatchOperations', () => {
   });
 
   afterEach(() => {
-    db.close();
+    if (db) db.close();
     [TEST_DB_PATH, `${TEST_DB_PATH}-wal`, `${TEST_DB_PATH}-shm`].forEach((file) => {
       if (fs.existsSync(file)) fs.unlinkSync(file);
     });
