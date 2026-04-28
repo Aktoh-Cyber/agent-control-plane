@@ -367,12 +367,33 @@ export class SkillLibrary {
     let normB = 0;
 
     for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+      dotProduct += a[i]! * b[i]!;
+      normA += a[i]! * a[i]!;
+      normB += b[i]! * b[i]!;
     }
 
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
+
+  // Compatibility aliases used by agentdb-learning.service
+  async addSkill(skill: Record<string, unknown>): Promise<void> {
+    await this.createSkill({
+      name: (skill.name as string) || 'unknown',
+      description: (skill.description as string) || '',
+      signature: { inputs: { task: 'string' }, outputs: { result: 'any' } },
+      successRate: (skill.successRate as number) || 0,
+      uses: (skill.usageCount as number) || 0,
+      avgReward: (skill.successRate as number) || 0,
+      avgLatencyMs: 0,
+      metadata: (skill.metadata as Record<string, any>) || undefined,
+    });
+  }
+
+  getSkillCount(): number {
+    const row = this.db.prepare('SELECT COUNT(*) as count FROM skills').get() as
+      | { count: number }
+      | undefined;
+    return row?.count ?? 0;
   }
 
   private computeSkillScore(skill: Skill & { similarity: number }): number {

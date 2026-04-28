@@ -520,7 +520,7 @@ export class CausalMemoryGraph {
     return 0.5 + 0.5 * Math.sign(t) * (1 - Math.pow(1 + (t * t) / df, -df / 2));
   }
 
-  private tInverse(p: number, df: number): number {
+  private tInverse(_p: number, _df: number): number {
     // Simplified inverse t-distribution (use proper stats library)
     // Approximation for 95% CI
     return 1.96; // Standard normal approximation

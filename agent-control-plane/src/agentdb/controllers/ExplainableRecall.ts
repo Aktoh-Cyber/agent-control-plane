@@ -111,7 +111,7 @@ export class ExplainableRecall {
     const certificateId = this.generateCertificateId(queryId, chunkIds);
 
     // 6. Generate proof chain for each chunk
-    const proofChain = chunks.map((chunk, idx) => this.getMerkleProof(merkleTree, idx)).flat();
+    const proofChain = chunks.map((_chunk, idx) => this.getMerkleProof(merkleTree, idx)).flat();
 
     // 7. Store certificate
     this.db
@@ -502,23 +502,23 @@ export class ExplainableRecall {
 
     const tree: string[][] = [hashes];
 
-    while (tree[tree.length - 1].length > 1) {
-      const level = tree[tree.length - 1];
+    while (tree[tree.length - 1]!.length > 1) {
+      const level = tree[tree.length - 1]!;
       const nextLevel: string[] = [];
 
       for (let i = 0; i < level.length; i += 2) {
         if (i + 1 < level.length) {
-          const combined = level[i] + level[i + 1];
+          const combined = level[i]! + level[i + 1]!;
           nextLevel.push(crypto.createHash('sha256').update(combined).digest('hex'));
         } else {
-          nextLevel.push(level[i]);
+          nextLevel.push(level[i]!);
         }
       }
 
       tree.push(nextLevel);
     }
 
-    return { root: tree[tree.length - 1][0], tree };
+    return { root: tree[tree.length - 1]![0]!, tree };
   }
 
   /**
@@ -533,9 +533,9 @@ export class ExplainableRecall {
       const isLeftNode = index % 2 === 0;
       const siblingIndex = isLeftNode ? index + 1 : index - 1;
 
-      if (siblingIndex < currentLevel.length) {
+      if (siblingIndex < currentLevel!.length) {
         proof.push({
-          hash: currentLevel[siblingIndex],
+          hash: currentLevel![siblingIndex]!,
           position: isLeftNode ? 'right' : 'left',
         });
       }
@@ -596,7 +596,7 @@ export class ExplainableRecall {
    */
   private determineReason(
     chunk: { id: string; relevance: number },
-    requirements: string[]
+    _requirements: string[]
   ): string {
     if (chunk.relevance > 0.9) return 'semantic_match';
     if (chunk.relevance > 0.7) return 'causal_link';

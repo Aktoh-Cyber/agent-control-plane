@@ -13,18 +13,18 @@
  * import { ReflexionMemory } from 'agent-control-plane/agentdb';
  *
  * // New (recommended)
- * import { ReflexionMemory } from 'agentdb/controllers/ReflexionMemory';
+ * import { ReflexionMemory } from './controllers/ReflexionMemory';
  * ```
  */
 
 // Import from individual controller paths (agentdb v1.3.9 exports pattern)
-export { CausalMemoryGraph } from 'agentdb/controllers/CausalMemoryGraph';
-export { CausalRecall } from 'agentdb/controllers/CausalRecall';
-export { EmbeddingService } from 'agentdb/controllers/EmbeddingService';
-export { ExplainableRecall } from 'agentdb/controllers/ExplainableRecall';
-export { NightlyLearner } from 'agentdb/controllers/NightlyLearner';
-export { ReflexionMemory } from 'agentdb/controllers/ReflexionMemory';
-export { SkillLibrary } from 'agentdb/controllers/SkillLibrary';
+export { CausalMemoryGraph } from './controllers/CausalMemoryGraph';
+export { CausalRecall } from './controllers/CausalRecall';
+export { EmbeddingService } from './controllers/EmbeddingService';
+export { ExplainableRecall } from './controllers/ExplainableRecall';
+export { NightlyLearner } from './controllers/NightlyLearner';
+export { ReflexionMemory } from './controllers/ReflexionMemory';
+export { SkillLibrary } from './controllers/SkillLibrary';
 
 // Note: These are custom types not exported from agentdb v1.3.9
 // Users should import from agentdb directly if needed

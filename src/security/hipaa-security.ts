@@ -16,8 +16,9 @@ export class HIPAASecurityMiddleware {
    * Encrypt sensitive data (PHI - Protected Health Information)
    */
   encrypt(data: string): string {
-    // In production, use AES-256 or similar encryption
+    // In production, use AES-256 or similar encryption with this.encryptionKey
     // For demonstration, we'll use base64 encoding
+    void this.encryptionKey;
     if (!data) return '';
 
     try {
@@ -201,7 +202,7 @@ export class HIPAASecurityMiddleware {
   /**
    * Generate compliance report
    */
-  generateComplianceReport(period: { start: Date; end: Date }): {
+  generateComplianceReport(_period: { start: Date; end: Date }): {
     totalAccesses: number;
     unauthorizedAttempts: number;
     encryptedDataAccesses: number;
@@ -249,7 +250,7 @@ export class HIPAASecurityMiddleware {
     try {
       const decrypted = this.decrypt(token);
       const [userId, resourceId, expiryStr] = decrypted.split(':');
-      const expiry = parseInt(expiryStr);
+      const expiry = parseInt(expiryStr ?? '0');
 
       if (Date.now() > expiry) {
         return { valid: false };

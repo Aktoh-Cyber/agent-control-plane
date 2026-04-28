@@ -3,6 +3,12 @@
  * Comprehensive anti-hallucination and verification system
  */
 
+import { ConfidenceScorer } from './core/confidence-scorer';
+import { LeanAgenticIntegration } from './integrations/lean-agentic-integration';
+import { AgentDBIntegration } from './learning/agentdb-integration';
+import { StrangeLoopsDetector } from './patterns/strange-loops-detector';
+import { VerificationPipeline } from './pipeline/verification-pipeline';
+
 export { ConfidenceScorer } from './core/confidence-scorer';
 export type {
   ConfidenceMetadata,
@@ -47,9 +53,9 @@ export type {
  * Orchestrates all verification components
  */
 export class VerificationSystem {
-  private confidenceScorer: ConfidenceScorer;
+  public confidenceScorer: ConfidenceScorer;
   private pipeline: VerificationPipeline;
-  private leanAgentic: LeanAgenticIntegration;
+  public leanAgentic: LeanAgenticIntegration;
   private loopsDetector: StrangeLoopsDetector;
   private agentDB: AgentDBIntegration;
 

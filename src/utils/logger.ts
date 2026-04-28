@@ -17,6 +17,7 @@ import winston from 'winston';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+void __dirname; // Used for log file paths in production
 
 /**
  * Log levels for the application
@@ -197,8 +198,8 @@ const parseSize = (size: string): number => {
   const match = size.match(/^(\d+)([kmg]?)$/i);
   if (!match) return 20 * 1024 * 1024; // Default 20MB
 
-  const value = parseInt(match[1], 10);
-  const unit = match[2].toLowerCase();
+  const value = parseInt(match[1]!, 10);
+  const unit = (match[2] ?? '').toLowerCase();
 
   switch (unit) {
     case 'g':

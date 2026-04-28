@@ -85,10 +85,10 @@ export interface PoolStatistics {
  */
 export class QuicTransport {
   private wasmClient: WasmQuicClient | null = null;
-  private config: Required<QuicTransportConfig>;
+  public readonly transportConfig: Required<QuicTransportConfig>;
 
   private constructor(config: Required<QuicTransportConfig>) {
-    this.config = config;
+    this.transportConfig = config;
   }
 
   /**
@@ -184,9 +184,9 @@ export class QuicTransport {
       type:
         typeof quicMessage.msg_type === 'string'
           ? quicMessage.msg_type
-          : Object.keys(quicMessage.msg_type)[0],
+          : (Object.keys(quicMessage.msg_type)[0] ?? 'unknown'),
       payload,
-      metadata: quicMessage.metadata,
+      metadata: quicMessage.metadata ?? undefined,
     };
   }
 

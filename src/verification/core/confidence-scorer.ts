@@ -180,7 +180,7 @@ export class ConfidenceScorer {
    * Detect contradictions in citations and claims
    */
   private async detectContradictions(
-    claim: string,
+    _claim: string,
     citations: MedicalCitation[]
   ): Promise<string[]> {
     const contradictions: string[] = [];

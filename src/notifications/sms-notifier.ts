@@ -150,7 +150,7 @@ export class SMSNotifier implements INotifier {
   /**
    * Get SMS delivery report from provider
    */
-  async getDeliveryReport(messageId: string): Promise<{
+  async getDeliveryReport(_messageId: string): Promise<{
     status: string;
     errorCode?: string;
     errorMessage?: string;

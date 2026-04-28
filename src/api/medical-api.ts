@@ -27,7 +27,7 @@ export class MedicalAPI {
   }
 
   async handleVerifyRequest(
-    analysisId: string,
+    _analysisId: string,
     analysis: MedicalAnalysis
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {

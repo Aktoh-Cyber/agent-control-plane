@@ -237,7 +237,12 @@ export class MedicalVerifyTool {
     level: 'info' | 'warning' | 'critical';
     message: string;
   }> {
-    const checks = [];
+    const checks: Array<{
+      name: string;
+      passed: boolean;
+      level: 'info' | 'warning' | 'critical';
+      message: string;
+    }> = [];
 
     // Check for emergency conditions without emergency urgency
     const hasCritical = analysis.conditions.some((c) => c.severity === 'critical');
@@ -335,7 +340,7 @@ export class MedicalVerifyTool {
       if (index > maxIndex) maxIndex = index;
     }
 
-    return severityOrder[maxIndex];
+    return severityOrder[maxIndex] ?? 'mild';
   }
 
   /**

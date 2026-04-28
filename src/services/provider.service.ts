@@ -240,7 +240,7 @@ export class ProviderService {
   private async sendSMS(
     phone: string,
     analysisId: string,
-    analysis: AnalysisResult,
+    _analysis: AnalysisResult,
     priority: string
   ): Promise<void> {
     // In production, integrate with SMS service (Twilio, AWS SNS, etc.)
@@ -256,7 +256,7 @@ export class ProviderService {
   private async sendPushNotification(
     providerId: string,
     analysisId: string,
-    analysis: AnalysisResult,
+    _analysis: AnalysisResult,
     priority: string
   ): Promise<void> {
     // In production, integrate with push service (Firebase, OneSignal, etc.)

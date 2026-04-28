@@ -218,7 +218,7 @@ function verifyBearerToken(token: string): HorsemenIdentity | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+    const payload = JSON.parse(Buffer.from(parts[1]!, 'base64url').toString('utf-8'));
     return {
       sub: (payload.sub as string) || '',
       email: (payload.email as string) || '',

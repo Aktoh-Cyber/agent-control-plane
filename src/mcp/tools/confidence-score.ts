@@ -108,7 +108,7 @@ export class ConfidenceScoreTool {
   /**
    * Interpret confidence score
    */
-  private interpretConfidence(score: number, issues: any[]): string {
+  private interpretConfidence(score: number, _issues: any[]): string {
     if (score >= 0.9) {
       return 'Excellent confidence. Analysis is well-supported and reliable for clinical decision-making.';
     }

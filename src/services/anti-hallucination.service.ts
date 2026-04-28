@@ -110,7 +110,7 @@ export class AntiHallucinationService {
   private assessDiagnosisConfidence(diagnoses: Diagnosis[]): number {
     if (diagnoses.length === 0) return 0;
 
-    const primaryDiagnosis = diagnoses[0];
+    const primaryDiagnosis = diagnoses[0]!;
     let score = primaryDiagnosis.confidence;
 
     // Reduce score if supporting evidence is weak
@@ -171,8 +171,7 @@ export class AntiHallucinationService {
       // Check if diagnostic criteria match
       let criteriaMatch = 0;
       for (const criteria of knowledge.diagnosticCriteria) {
-        const evidenceTypes = diagnosis.supportingEvidence.map((e) => e.type);
-        const hasRequired = criteria.required.every((req) =>
+        const hasRequired = criteria.required.every((req: string) =>
           diagnosis.supportingEvidence.some((ev) =>
             ev.description.toLowerCase().includes(req.toLowerCase())
           )
@@ -196,8 +195,8 @@ export class AntiHallucinationService {
     // Check for contradictions between diagnoses
     for (let i = 0; i < analysis.diagnosis.length; i++) {
       for (let j = i + 1; j < analysis.diagnosis.length; j++) {
-        const d1 = analysis.diagnosis[i];
-        const d2 = analysis.diagnosis[j];
+        const d1 = analysis.diagnosis[i]!;
+        const d2 = analysis.diagnosis[j]!;
 
         // Check for mutually exclusive conditions
         if (this.areMutuallyExclusive(d1.condition, d2.condition)) {
@@ -214,8 +213,8 @@ export class AntiHallucinationService {
     // Check for contradictions in recommendations
     for (let i = 0; i < analysis.recommendations.length; i++) {
       for (let j = i + 1; j < analysis.recommendations.length; j++) {
-        const r1 = analysis.recommendations[i];
-        const r2 = analysis.recommendations[j];
+        const r1 = analysis.recommendations[i]!;
+        const r2 = analysis.recommendations[j]!;
 
         if (this.areContradictoryRecommendations(r1.description, r2.description)) {
           contradictions.push({
@@ -337,9 +336,9 @@ export class AntiHallucinationService {
 
     return exclusivePairs.some(
       (pair) =>
-        (condition1.toLowerCase().includes(pair[0]) &&
-          condition2.toLowerCase().includes(pair[1])) ||
-        (condition1.toLowerCase().includes(pair[1]) && condition2.toLowerCase().includes(pair[0]))
+        (condition1.toLowerCase().includes(pair[0]!) &&
+          condition2.toLowerCase().includes(pair[1]!)) ||
+        (condition1.toLowerCase().includes(pair[1]!) && condition2.toLowerCase().includes(pair[0]!))
     );
   }
 
@@ -352,10 +351,10 @@ export class AntiHallucinationService {
     ];
 
     return contradictoryPhrases.some((pair) => {
-      const has1 = rec1.toLowerCase().includes(pair[0]);
-      const has2 = rec2.toLowerCase().includes(pair[1]);
-      const reverse1 = rec1.toLowerCase().includes(pair[1]);
-      const reverse2 = rec2.toLowerCase().includes(pair[0]);
+      const has1 = rec1.toLowerCase().includes(pair[0]!);
+      const has2 = rec2.toLowerCase().includes(pair[1]!);
+      const reverse1 = rec1.toLowerCase().includes(pair[1]!);
+      const reverse2 = rec2.toLowerCase().includes(pair[0]!);
       return (has1 && has2) || (reverse1 && reverse2);
     });
   }

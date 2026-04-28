@@ -75,7 +75,7 @@ export class LeanAgenticIntegration {
    * Perform causal inference validation
    */
   async validateCausalInference(
-    hypothesis: string,
+    _hypothesis: string,
     data: Record<string, any>,
     model: CausalModel
   ): Promise<CausalInferenceResult> {
@@ -228,7 +228,7 @@ export class LeanAgenticIntegration {
    */
   private validateIgnorability(
     model: CausalModel,
-    data: Record<string, any>
+    _data: Record<string, any>
   ): AssumptionValidation {
     const confounders = model.variables.filter((v) => v.type === 'confounder');
 
@@ -256,7 +256,7 @@ export class LeanAgenticIntegration {
   /**
    * Validate positivity assumption
    */
-  private validatePositivity(data: Record<string, any>): AssumptionValidation {
+  private validatePositivity(_data: Record<string, any>): AssumptionValidation {
     // Check for common support (overlap in covariate distributions)
     // Simplified check - in practice would use propensity score analysis
 
@@ -334,7 +334,7 @@ export class LeanAgenticIntegration {
    * Estimate causal effect
    */
   private estimateCausalEffect(
-    model: CausalModel,
+    _model: CausalModel,
     data: Record<string, any>
   ): { estimate: number; standardError: number } {
     // Simplified estimation - in practice would use regression adjustment,
@@ -351,7 +351,7 @@ export class LeanAgenticIntegration {
    */
   private calculateConfidenceInterval(
     effect: { estimate: number; standardError: number },
-    data: Record<string, any>
+    _data: Record<string, any>
   ): [number, number] {
     // 95% confidence interval using normal approximation
     const z = 1.96; // 95% CI
@@ -366,7 +366,7 @@ export class LeanAgenticIntegration {
    */
   private computePValue(
     effect: { estimate: number; standardError: number },
-    data: Record<string, any>
+    _data: Record<string, any>
   ): number {
     // Two-tailed z-test
     const z = Math.abs(effect.estimate / effect.standardError);
@@ -406,7 +406,7 @@ export class LeanAgenticIntegration {
    * Perform statistical significance test
    */
   async performSignificanceTest(
-    hypothesis: string,
+    _hypothesis: string,
     data: Record<string, any>,
     testType: 't-test' | 'chi-square' | 'anova' | 'regression'
   ): Promise<StatisticalTest> {
@@ -453,7 +453,7 @@ export class LeanAgenticIntegration {
   /**
    * Calculate statistical power
    */
-  private calculatePower(effectSize: number, sampleSize: number, alpha: number): number {
+  private calculatePower(effectSize: number, sampleSize: number, _alpha: number): number {
     // Simplified power calculation for two-sample t-test
     // In practice would use non-central t-distribution
 
@@ -470,7 +470,7 @@ export class LeanAgenticIntegration {
    * Validate statistical model
    */
   async validateStatisticalModel(
-    model: Record<string, any>,
+    _model: Record<string, any>,
     data: Record<string, any>
   ): Promise<{
     valid: boolean;
@@ -490,19 +490,19 @@ export class LeanAgenticIntegration {
     return { valid, diagnostics, recommendations };
   }
 
-  private analyzeResiduals(data: Record<string, any>): any {
+  private analyzeResiduals(_data: Record<string, any>): any {
     return { mean: 0, variance: 1, pattern: 'random' };
   }
 
-  private checkMulticollinearity(data: Record<string, any>): any {
+  private checkMulticollinearity(_data: Record<string, any>): any {
     return { vif: 1.5, problematic: false };
   }
 
-  private checkHeteroscedasticity(data: Record<string, any>): any {
+  private checkHeteroscedasticity(_data: Record<string, any>): any {
     return { present: false, test: 'Breusch-Pagan', pValue: 0.1 };
   }
 
-  private checkNormality(data: Record<string, any>): any {
+  private checkNormality(_data: Record<string, any>): any {
     return { normal: true, test: 'Shapiro-Wilk', pValue: 0.3 };
   }
 

@@ -48,9 +48,10 @@ server.addTool({
   }),
   execute: async (args) => {
     const result = await medicalAnalyze.execute(args);
-    return result.content[0].type === 'json'
-      ? JSON.stringify(result.content[0].json, null, 2)
-      : result.content[0].text || '';
+    const first = result.content[0]!;
+    return first.type === 'json'
+      ? JSON.stringify((first as any).json, null, 2)
+      : (first as any).text || '';
   },
 });
 
@@ -65,10 +66,11 @@ server.addTool({
     strictMode: z.boolean().optional().default(true).describe('Enable strict validation mode'),
   }),
   execute: async (args) => {
-    const result = await medicalVerify.execute(args);
-    return result.content[0].type === 'json'
-      ? JSON.stringify(result.content[0].json, null, 2)
-      : result.content[0].text || '';
+    const result = await medicalVerify.execute(args as any);
+    const first = result.content[0]!;
+    return first.type === 'json'
+      ? JSON.stringify((first as any).json, null, 2)
+      : (first as any).text || '';
   },
 });
 
@@ -90,9 +92,10 @@ server.addTool({
   }),
   execute: async (args) => {
     const result = await providerNotify.execute(args);
-    return result.content[0].type === 'json'
-      ? JSON.stringify(result.content[0].json, null, 2)
-      : result.content[0].text || '';
+    const first = result.content[0]!;
+    return first.type === 'json'
+      ? JSON.stringify((first as any).json, null, 2)
+      : (first as any).text || '';
   },
 });
 
@@ -110,10 +113,11 @@ server.addTool({
       .describe('Include detailed component breakdown'),
   }),
   execute: async (args) => {
-    const result = await confidenceScore.execute(args);
-    return result.content[0].type === 'json'
-      ? JSON.stringify(result.content[0].json, null, 2)
-      : result.content[0].text || '';
+    const result = await confidenceScore.execute(args as any);
+    const first = result.content[0]!;
+    return first.type === 'json'
+      ? JSON.stringify((first as any).json, null, 2)
+      : (first as any).text || '';
   },
 });
 
@@ -128,9 +132,10 @@ server.addTool({
   }),
   execute: async (args) => {
     const result = await citationVerify.execute(args);
-    return result.content[0].type === 'json'
-      ? JSON.stringify(result.content[0].json, null, 2)
-      : result.content[0].text || '';
+    const first = result.content[0]!;
+    return first.type === 'json'
+      ? JSON.stringify((first as any).json, null, 2)
+      : (first as any).text || '';
   },
 });
 
@@ -166,10 +171,11 @@ server.addTool({
       };
     }
 
-    const result = await knowledgeSearch.execute(args);
-    return result.content[0].type === 'json'
-      ? JSON.stringify(result.content[0].json, null, 2)
-      : result.content[0].text || '';
+    const result = await knowledgeSearch.execute(args as any);
+    const first = result.content[0]!;
+    return first.type === 'json'
+      ? JSON.stringify((first as any).json, null, 2)
+      : (first as any).text || '';
   },
 });
 

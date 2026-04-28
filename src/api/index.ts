@@ -85,7 +85,7 @@ export class MedicalAnalysisAPI {
     const router = express.Router();
 
     // Health check
-    router.get('/health', (req: Request, res: Response) => {
+    router.get('/health', (_req: Request, res: Response) => {
       res.json({
         status: 'healthy',
         timestamp: new Date(),
@@ -94,7 +94,7 @@ export class MedicalAnalysisAPI {
     });
 
     // POST /analyze - Submit medical query for analysis
-    router.post('/analyze', async (req: Request, res: Response) => {
+    router.post('/analyze', async (req: Request, res: Response): Promise<any> => {
       try {
         const request: AnalysisRequest = req.body;
         const requestId = uuidv4();
@@ -136,7 +136,7 @@ export class MedicalAnalysisAPI {
         result.warnings = warnings;
 
         // Check for pattern recognition
-        const patterns = await this.learningService.recognizePatterns(request.symptoms, {
+        await this.learningService.recognizePatterns(request.symptoms, {
           condition: request.condition,
         });
 
@@ -192,9 +192,9 @@ export class MedicalAnalysisAPI {
     });
 
     // GET /analysis/:id - Get analysis results
-    router.get('/analysis/:id', async (req: Request, res: Response) => {
+    router.get('/analysis/:id', async (req: Request, res: Response): Promise<any> => {
       try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const result = await this.analysisService.getAnalysis(id);
 
         if (!result) {
@@ -228,7 +228,7 @@ export class MedicalAnalysisAPI {
     });
 
     // POST /provider/review - Provider review endpoint
-    router.post('/provider/review', async (req: Request, res: Response) => {
+    router.post('/provider/review', async (req: Request, res: Response): Promise<any> => {
       try {
         const { analysisId, decision, comments } = req.body;
 
@@ -284,7 +284,7 @@ export class MedicalAnalysisAPI {
     });
 
     // POST /provider/notify - Notify provider
-    router.post('/provider/notify', async (req: Request, res: Response) => {
+    router.post('/provider/notify', async (req: Request, res: Response): Promise<any> => {
       try {
         const { analysisId, urgent } = req.body;
 
@@ -328,7 +328,7 @@ export class MedicalAnalysisAPI {
     });
 
     // GET /metrics - Get learning metrics
-    router.get('/metrics', async (req: Request, res: Response) => {
+    router.get('/metrics', async (_req: Request, res: Response) => {
       try {
         const metrics = await this.learningService.getMetrics();
 
@@ -400,7 +400,7 @@ export class MedicalAnalysisAPI {
   /**
    * Handle incoming WebSocket messages
    */
-  private handleWebSocketMessage(ws: WebSocket, data: any, clientId: string): void {
+  private handleWebSocketMessage(ws: WebSocket, data: any, _clientId: string): void {
     // Handle subscribe/unsubscribe, ping/pong, etc.
     if (data.type === 'ping') {
       this.sendWebSocketMessage(ws, {
@@ -423,7 +423,7 @@ export class MedicalAnalysisAPI {
   /**
    * Broadcast to all connected clients
    */
-  private broadcast(message: WebSocketMessage): void {
+  public broadcast(message: WebSocketMessage): void {
     this.connections.forEach((ws) => {
       this.sendWebSocketMessage(ws, message);
     });
@@ -433,7 +433,7 @@ export class MedicalAnalysisAPI {
    * Setup error handling
    */
   private setupErrorHandling(): void {
-    this.app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    this.app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
       console.error('Unhandled error:', err);
       res
         .status(500)

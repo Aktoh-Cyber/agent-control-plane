@@ -141,7 +141,7 @@ export class EmergencyEscalationService {
   /**
    * Find suitable providers for alert
    */
-  private findProvidersForAlert(alert: EmergencyAlert): string[] {
+  private findProvidersForAlert(_alert: EmergencyAlert): string[] {
     // This would integrate with provider service to find available providers
     // For now, return empty array
     return [];

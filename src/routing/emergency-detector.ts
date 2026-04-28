@@ -7,8 +7,8 @@ import { PatientQuery } from '../providers/types';
 import { EmergencySignal, EmergencyType } from './types';
 
 export class EmergencyDetector {
-  private emergencyKeywords: EmergencySignal[];
-  private urgentKeywords: EmergencySignal[];
+  private emergencyKeywords!: EmergencySignal[];
+  private urgentKeywords!: EmergencySignal[];
 
   constructor() {
     this.initializeKeywords();

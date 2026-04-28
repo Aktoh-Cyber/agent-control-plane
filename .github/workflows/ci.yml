@@ -37,11 +37,9 @@ jobs:
 
       - name: Run ESLint
         run: pnpm run lint
-        continue-on-error: true
 
       - name: Run TypeScript type checking
         run: pnpm run typecheck
-        continue-on-error: true
 
   test:
     name: Test (Node ${{ matrix.node-version }})
@@ -88,7 +86,6 @@ jobs:
         env:
           NODE_ENV: test
           CI: true
-        continue-on-error: true
 
       - name: Upload test results
         if: always()
@@ -176,7 +173,6 @@ jobs:
         env:
           NODE_ENV: test
           CI: true
-        continue-on-error: true
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
@@ -229,21 +225,18 @@ jobs:
         env:
           NODE_ENV: test
           CI: true
-        continue-on-error: true
 
       - name: Run hierarchical topology tests
         run: pnpm run test:hierarchical
         env:
           NODE_ENV: test
           CI: true
-        continue-on-error: true
 
       - name: Run ring topology tests
         run: pnpm run test:ring
         env:
           NODE_ENV: test
           CI: true
-        continue-on-error: true
 
   benchmark:
     name: Performance Benchmarks

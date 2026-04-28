@@ -106,7 +106,7 @@ export class MedicalAnalyzeTool {
    */
   private async analyzeSymptoms(
     symptoms: string[],
-    patientHistory?: string,
+    _patientHistory?: string,
     vitalSigns?: Record<string, number>
   ): Promise<MedicalAnalysis> {
     // In production, this would call a medical AI model
@@ -208,7 +208,7 @@ export class MedicalAnalyzeTool {
    */
   private determineSeverity(
     vitalSigns?: Record<string, number>,
-    redFlags?: string[]
+    _redFlags?: string[]
   ): 'mild' | 'moderate' | 'severe' | 'critical' {
     if (!vitalSigns) return 'moderate';
 
@@ -274,7 +274,7 @@ export class MedicalAnalyzeTool {
   /**
    * Generate treatment recommendations
    */
-  private generateRecommendations(conditions: MedicalCondition[], symptoms: string[]): string[] {
+  private generateRecommendations(conditions: MedicalCondition[], _symptoms: string[]): string[] {
     const recommendations: string[] = [];
 
     for (const condition of conditions) {
@@ -310,7 +310,7 @@ export class MedicalAnalyzeTool {
    */
   private determineUrgency(
     conditions: MedicalCondition[],
-    vitalSigns?: Record<string, number>
+    _vitalSigns?: Record<string, number>
   ): 'routine' | 'urgent' | 'emergency' {
     // Emergency conditions
     if (

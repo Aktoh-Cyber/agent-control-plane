@@ -223,7 +223,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 // Call tool handler
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+// @ts-expect-error - Handler types are complex and vary between MCP SDK versions
+server.setRequestHandler(CallToolRequestSchema, async (request: any, _extra: any) => {
   const { name, arguments: args } = request.params;
 
   try {
@@ -252,9 +253,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'knowledge_search':
         // Convert string dates to Date objects
-        if (args?.filters?.dateRange) {
-          const dr = (args.filters as any).dateRange;
-          (args.filters as any).dateRange = {
+        if ((args as any)?.filters?.dateRange) {
+          const dr = (args as any).filters.dateRange;
+          (args as any).filters.dateRange = {
             start: dr.start ? new Date(dr.start) : undefined,
             end: dr.end ? new Date(dr.end) : undefined,
           };

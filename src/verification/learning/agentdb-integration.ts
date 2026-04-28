@@ -305,7 +305,7 @@ export class AgentDBIntegration {
    */
   private async recordCorrectionPattern(
     correction: Correction,
-    record: LearningRecord
+    _record: LearningRecord
   ): Promise<void> {
     const patternId = `correction-${correction.type}`;
     const pattern = this.patterns.get(patternId) || {
@@ -412,7 +412,7 @@ export class AgentDBIntegration {
   /**
    * Check if pattern matches current features
    */
-  private patternMatches(pattern: Pattern, features: FeatureVector, context: string[]): boolean {
+  private patternMatches(pattern: Pattern, features: FeatureVector, _context: string[]): boolean {
     // Simple matching - check if pattern context appears in current context
     if (pattern.id === 'high-quality-citations') {
       return features.citationCount >= 5 && features.peerReviewedRatio >= 0.8;

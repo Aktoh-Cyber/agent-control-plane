@@ -136,7 +136,7 @@ export function logPerformance(operation: string, duration: number, metadata?: a
   };
 
   if (duration > 1000) {
-    console.warn(`[PERFORMANCE] Slow operation: ${operation} took ${duration}ms`);
+    console.warn(`[PERFORMANCE] Slow operation: ${JSON.stringify(perfLog)}`);
   } else {
     console.log(`[PERFORMANCE] ${operation}: ${duration}ms`);
   }

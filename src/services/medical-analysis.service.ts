@@ -92,7 +92,7 @@ export class MedicalAnalysisService {
    * Generate recommendations based on diagnosis
    */
   private async generateRecommendations(
-    request: AnalysisRequest,
+    _request: AnalysisRequest,
     diagnoses: Diagnosis[]
   ): Promise<Recommendation[]> {
     const recommendations: Recommendation[] = [];
@@ -137,8 +137,8 @@ export class MedicalAnalysisService {
    * Generate differential diagnoses
    */
   private generateDifferentials(
-    primaryCondition: string,
-    symptoms: string[]
+    _primaryCondition: string,
+    _symptoms: string[]
   ): DifferentialDiagnosis[] {
     // Simplified - in production, use medical knowledge base
     return [
@@ -189,7 +189,7 @@ export class MedicalAnalysisService {
   /**
    * Generate citations for diagnosis
    */
-  private generateCitations(diagnoses: Diagnosis[]): Citation[] {
+  private generateCitations(_diagnoses: Diagnosis[]): Citation[] {
     // In production, retrieve from medical literature databases
     return [
       {

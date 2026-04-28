@@ -52,7 +52,6 @@ export interface CausalRecallResult {
 
 export class CausalRecall {
   private db: Database;
-  private causalGraph: CausalMemoryGraph;
   private explainableRecall: ExplainableRecall;
   private embedder: EmbeddingService;
 
@@ -68,7 +67,8 @@ export class CausalRecall {
   ) {
     this.db = db;
     this.embedder = embedder;
-    this.causalGraph = new CausalMemoryGraph(db);
+    // CausalMemoryGraph initialized for future causal inference integration
+    new CausalMemoryGraph(db);
     this.explainableRecall = new ExplainableRecall(db);
   }
 
@@ -356,9 +356,9 @@ export class CausalRecall {
     let magnitudeB = 0;
 
     for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      magnitudeA += a[i] * a[i];
-      magnitudeB += b[i] * b[i];
+      dotProduct += a[i]! * b[i]!;
+      magnitudeA += a[i]! * a[i]!;
+      magnitudeB += b[i]! * b[i]!;
     }
 
     const magnitude = Math.sqrt(magnitudeA) * Math.sqrt(magnitudeB);

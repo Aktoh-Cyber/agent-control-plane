@@ -337,15 +337,35 @@ export class ReflexionMemory {
     return new Float32Array(buffer.buffer, buffer.byteOffset, buffer.length / 4);
   }
 
+  // Compatibility aliases used by agentdb-learning.service
+  async addTrajectory(trajectory: Record<string, unknown>): Promise<void> {
+    await this.storeEpisode({
+      sessionId: (trajectory.taskId as string) || 'unknown',
+      task: (trajectory.verdict as string) || '',
+      input: JSON.stringify(trajectory.steps),
+      output: (trajectory.reflection as string) || '',
+      critique: (trajectory.reflection as string) || '',
+      reward: trajectory.verdict === 'correct' ? 1.0 : 0.0,
+      success: trajectory.verdict === 'correct',
+    });
+  }
+
+  getTrajectoryCount(): number {
+    const row = this.db.prepare('SELECT COUNT(*) as count FROM episodes').get() as
+      | { count: number }
+      | undefined;
+    return row?.count ?? 0;
+  }
+
   private cosineSimilarity(a: Float32Array, b: Float32Array): number {
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
 
     for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+      dotProduct += a[i]! * b[i]!;
+      normA += a[i]! * a[i]!;
+      normB += b[i]! * b[i]!;
     }
 
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));

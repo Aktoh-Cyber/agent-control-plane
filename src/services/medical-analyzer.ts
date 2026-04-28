@@ -37,7 +37,7 @@ export class MedicalAnalyzerService {
 
     // Calculate confidence and verification score
     const confidence = this.calculateConfidence(hallucinationChecks, crossCheckCount, citations);
-    const verificationScore = await this.verificationService.calculateVerificationScore({
+    const verificationScore = await this.verificationService.computeVerificationScore({
       analysis,
       diagnosis,
       citations,
@@ -81,7 +81,7 @@ export class MedicalAnalyzerService {
     );
   }
 
-  private async generateDiagnosis(patientData: PatientData, analysis: string): Promise<string[]> {
+  private async generateDiagnosis(patientData: PatientData, _analysis: string): Promise<string[]> {
     // Generate differential diagnosis
     const diagnoses: string[] = [];
 
@@ -97,7 +97,7 @@ export class MedicalAnalyzerService {
 
   private async findCitations(diagnosis: string[]): Promise<Citation[]> {
     // Find medical literature citations
-    return diagnosis.map((d, index) => ({
+    return diagnosis.map((_d, index) => ({
       source: `Medical Journal ${index + 1}`,
       reference: `DOI: 10.1234/medj.${index + 1000}`,
       relevance: 0.85 + Math.random() * 0.1,
@@ -106,7 +106,7 @@ export class MedicalAnalyzerService {
   }
 
   private async generateRecommendations(
-    patientData: PatientData,
+    _patientData: PatientData,
     diagnosis: string[]
   ): Promise<string[]> {
     const recommendations: string[] = [];
@@ -128,7 +128,7 @@ export class MedicalAnalyzerService {
 
   private async identifyRiskFactors(
     patientData: PatientData,
-    diagnosis: string[]
+    _diagnosis: string[]
   ): Promise<RiskFactor[]> {
     const riskFactors: RiskFactor[] = [];
 
@@ -153,7 +153,7 @@ export class MedicalAnalyzerService {
 
   private async runHallucinationChecks(
     analysis: string,
-    diagnosis: string[],
+    _diagnosis: string[],
     citations: Citation[]
   ): Promise<HallucinationCheck[]> {
     const checks: HallucinationCheck[] = [];

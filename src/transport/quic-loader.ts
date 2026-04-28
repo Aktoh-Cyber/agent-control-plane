@@ -18,11 +18,11 @@ import type { AgentMessage, QuicTransport, QuicTransportConfig } from './quic';
  */
 class WebSocketFallbackTransport {
   private connections: Map<string, WebSocket> = new Map();
-  private config: Required<QuicTransportConfig>;
+  public readonly transportConfig: Required<QuicTransportConfig>;
   private messageQueue: Map<string, AgentMessage[]> = new Map();
 
   constructor(config: Required<QuicTransportConfig>) {
-    this.config = config;
+    this.transportConfig = config;
   }
 
   static async create(config: QuicTransportConfig = {}) {

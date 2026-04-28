@@ -50,7 +50,7 @@ export class InAppNotifier implements INotifier {
       if (userNotifs.size >= this.config.maxNotificationsPerUser) {
         // Remove oldest notification
         const oldestId = Array.from(userNotifs)[0];
-        this.removeNotification(oldestId);
+        if (oldestId) this.removeNotification(oldestId);
       }
 
       // Store notification

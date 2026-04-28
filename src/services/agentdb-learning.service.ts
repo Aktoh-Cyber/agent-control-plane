@@ -3,6 +3,7 @@
  * Pattern recognition and continuous learning for medical analysis
  */
 
+import Database from 'better-sqlite3';
 import {
   EmbeddingService,
   ReflexionMemory,
@@ -18,13 +19,16 @@ export class AgentDBLearningService {
   private reflexionMemory: ReflexionMemory;
   private skillLibrary: SkillLibrary;
   private embeddingService: EmbeddingService;
-  private dbPath: string;
 
   constructor(dbPath: string = './data/medical-learning.db') {
-    this.dbPath = dbPath;
-    this.reflexionMemory = new ReflexionMemory({ dbPath });
-    this.skillLibrary = new SkillLibrary({ dbPath });
-    this.embeddingService = new EmbeddingService({ dbPath });
+    const db = new Database(dbPath);
+    this.embeddingService = new EmbeddingService({
+      model: 'all-MiniLM-L6-v2',
+      dimension: 384,
+      provider: 'local',
+    });
+    this.reflexionMemory = new ReflexionMemory(db, this.embeddingService);
+    this.skillLibrary = new SkillLibrary(db, this.embeddingService);
   }
 
   /**
@@ -74,7 +78,7 @@ export class AgentDBLearningService {
    */
   public async recognizePatterns(
     symptoms: string[],
-    context?: Record<string, any>
+    _context?: Record<string, any>
   ): Promise<PatternRecognitionResult> {
     try {
       // Generate embedding for symptom cluster
@@ -82,14 +86,10 @@ export class AgentDBLearningService {
       const queryEmbedding = await this.embeddingService.generateEmbedding(queryText);
 
       // Search for similar patterns
-      const similarPatterns = await this.embeddingService.search(queryEmbedding, {
-        limit: 10,
-        threshold: 0.7,
-        filter: { patternType: 'symptom_cluster' },
-      });
+      const similarPatterns = await this.embeddingService.search(queryEmbedding as any, 10);
 
       // Analyze applicability
-      const patterns: LearningPattern[] = similarPatterns.map((result) => ({
+      const patterns: LearningPattern[] = similarPatterns.map((result: any) => ({
         id: result.id,
         patternType: 'symptom_cluster',
         frequency: result.metadata?.frequency || 1,
@@ -127,8 +127,8 @@ export class AgentDBLearningService {
    */
   public async getRelevantSkills(condition: string): Promise<any[]> {
     try {
-      const skills = await this.skillLibrary.searchSkills(condition, 5);
-      return skills.filter((skill) => skill.successRate > 0.7);
+      const skills = await this.skillLibrary.searchSkills({ task: condition, k: 5 });
+      return skills.filter((skill: any) => skill.successRate > 0.7);
     } catch (error) {
       console.error('Error retrieving skills:', error);
       return [];
@@ -152,15 +152,11 @@ export class AgentDBLearningService {
       const patternText = JSON.stringify(pattern);
       const embedding = await this.embeddingService.generateEmbedding(patternText);
 
-      await this.embeddingService.store({
-        id: `pattern_${Date.now()}_${Math.random()}`,
-        embedding,
-        metadata: {
-          ...pattern,
-          patternType: 'diagnosis',
-          frequency: 1,
-          accuracy: diagnosis.confidence,
-        },
+      await this.embeddingService.store(`pattern_${Date.now()}_${Math.random()}`, embedding, {
+        ...pattern,
+        patternType: 'diagnosis',
+        frequency: 1,
+        accuracy: diagnosis.confidence,
       });
     }
 
@@ -177,15 +173,11 @@ export class AgentDBLearningService {
       const patternText = JSON.stringify(pattern);
       const embedding = await this.embeddingService.generateEmbedding(patternText);
 
-      await this.embeddingService.store({
-        id: `rec_pattern_${Date.now()}_${Math.random()}`,
-        embedding,
-        metadata: {
-          ...pattern,
-          patternType: 'recommendation',
-          frequency: 1,
-          accuracy: rec.confidence,
-        },
+      await this.embeddingService.store(`rec_pattern_${Date.now()}_${Math.random()}`, embedding, {
+        ...pattern,
+        patternType: 'recommendation',
+        frequency: 1,
+        accuracy: rec.confidence,
       });
     }
   }
@@ -234,7 +226,7 @@ export class AgentDBLearningService {
   /**
    * Generate reasoning for pattern recognition
    */
-  private generatePatternReasoning(patterns: LearningPattern[], symptoms: string[]): string {
+  private generatePatternReasoning(patterns: LearningPattern[], _symptoms: string[]): string {
     if (patterns.length === 0) {
       return 'No similar patterns found in historical data.';
     }
@@ -244,7 +236,7 @@ export class AgentDBLearningService {
 
     return (
       `Found ${patterns.length} similar patterns with average accuracy ${(avgAccuracy * 100).toFixed(1)}% ` +
-      `(seen ${totalFrequency} times). Symptoms match ${patterns[0].patternType} patterns from previous successful analyses.`
+      `(seen ${totalFrequency} times). Symptoms match ${patterns[0]!.patternType} patterns from previous successful analyses.`
     );
   }
 

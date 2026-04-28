@@ -25,7 +25,7 @@ export class VerificationService {
     };
 
     const issues = await this.identifyIssues(checks, data);
-    const score = this.calculateVerificationScore(checks);
+    const score = this.calculateScore(checks);
     const passed = score >= this.VERIFICATION_THRESHOLD;
 
     return {
@@ -36,7 +36,7 @@ export class VerificationService {
     };
   }
 
-  async calculateVerificationScore(data: {
+  async computeVerificationScore(data: {
     analysis: string;
     diagnosis: string[];
     citations: Citation[];
@@ -50,7 +50,7 @@ export class VerificationService {
       hallucinationFree: data.hallucinationChecks.every((c) => c.passed),
     };
 
-    return this.calculateVerificationScore(checks);
+    return this.calculateScore(checks);
   }
 
   private async checkMedicalAccuracy(analysis: string, diagnosis: string[]): Promise<boolean> {
@@ -65,7 +65,7 @@ export class VerificationService {
     return citations.length > 0 && citations.every((c) => c.verified && c.relevance > 0.7);
   }
 
-  private async checkLogicalConsistency(analysis: string, diagnosis: string[]): Promise<boolean> {
+  private async checkLogicalConsistency(analysis: string, _diagnosis: string[]): Promise<boolean> {
     // Check for contradictions and logical flow
     const hasContradiction =
       analysis.toLowerCase().includes('however') && analysis.toLowerCase().includes('but not');
@@ -93,13 +93,14 @@ export class VerificationService {
 
     const hasSuspiciousPatterns = suspiciousPatterns.some((pattern) => pattern.test(analysis));
     const hasProperCitations = citations.length >= 1;
+    const citationThreshold = citations.every((c) => c.relevance >= this.HALLUCINATION_THRESHOLD);
 
-    return !hasSuspiciousPatterns && hasProperCitations;
+    return !hasSuspiciousPatterns && hasProperCitations && citationThreshold;
   }
 
   private async identifyIssues(
     checks: Record<string, boolean>,
-    data: any
+    _data: any
   ): Promise<VerificationIssue[]> {
     const issues: VerificationIssue[] = [];
 
@@ -142,7 +143,7 @@ export class VerificationService {
     return issues;
   }
 
-  private calculateVerificationScore(checks: Record<string, boolean>): number {
+  private calculateScore(checks: Record<string, boolean>): number {
     const weights = {
       medicalAccuracy: 0.3,
       citationValidity: 0.2,

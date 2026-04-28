@@ -99,7 +99,7 @@ export class PatientQueue {
     for (const priority of priorityOrder) {
       const prioritySet = this.priorityQueue.get(priority);
       if (prioritySet && prioritySet.size > 0) {
-        const queryId = Array.from(prioritySet)[0];
+        const queryId = Array.from(prioritySet)[0]!;
         const query = this.queue.get(queryId);
         if (query && query.status === QueryStatus.PENDING) {
           return query;

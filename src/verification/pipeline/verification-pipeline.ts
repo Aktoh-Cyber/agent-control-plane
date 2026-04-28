@@ -146,7 +146,7 @@ export class VerificationPipeline {
    */
   async detectHallucinations(
     text: string,
-    context?: Record<string, any>
+    _context?: Record<string, any>
   ): Promise<HallucinationDetection[]> {
     const hallucinations: HallucinationDetection[] = [];
 

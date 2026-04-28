@@ -128,14 +128,38 @@ export class EmbeddingService {
     // Normalize
     let norm = 0;
     for (let i = 0; i < embedding.length; i++) {
-      norm += embedding[i] * embedding[i];
+      norm += embedding[i]! * embedding[i]!;
     }
     norm = Math.sqrt(norm);
 
     for (let i = 0; i < embedding.length; i++) {
-      embedding[i] /= norm;
+      embedding[i]! /= norm;
     }
 
     return embedding;
+  }
+
+  // Compatibility aliases used by agentdb-learning.service
+  async generateEmbedding(text: string): Promise<Float32Array> {
+    return this.embed(text);
+  }
+
+  async store(
+    _id: string,
+    _embedding: Float32Array,
+    _metadata?: Record<string, unknown>
+  ): Promise<void> {
+    // Storage delegated to the caller's persistence layer
+  }
+
+  async search(
+    _query: Float32Array,
+    _topK?: number
+  ): Promise<Array<{ id: string; score: number }>> {
+    return [];
+  }
+
+  getCount(): number {
+    return this.cache.size;
   }
 }

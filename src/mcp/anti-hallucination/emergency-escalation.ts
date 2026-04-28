@@ -8,7 +8,7 @@ import type { EmergencyEscalation, MedicalAnalysis } from '../types';
 export class EmergencyEscalationHandler {
   private readonly escalations: Map<string, EmergencyEscalation>;
   private readonly emergencyContacts: string[];
-  private readonly escalationThreshold: number;
+  public readonly escalationThreshold: number;
 
   constructor() {
     this.escalations = new Map();

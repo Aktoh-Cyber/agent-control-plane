@@ -70,7 +70,7 @@ export class StrangeLoopsDetector {
    */
   async detectCircularReasoning(
     text: string,
-    context?: Record<string, any>
+    _context?: Record<string, any>
   ): Promise<LogicalPattern[]> {
     const patterns: LogicalPattern[] = [];
 
@@ -137,12 +137,12 @@ export class StrangeLoopsDetector {
     // Identify relationships between claims
     for (let i = 0; i < claims.length; i++) {
       for (let j = i + 1; j < claims.length; j++) {
-        const relationship = this.detectRelationship(claims[i], claims[j]);
+        const relationship = this.detectRelationship(claims[i]!, claims[j]!);
 
         if (relationship) {
           edges.push({
-            from: claims[i].id,
-            to: claims[j].id,
+            from: claims[i]!.id,
+            to: claims[j]!.id,
             type: relationship.type,
             strength: relationship.strength,
           });
@@ -277,7 +277,7 @@ export class StrangeLoopsDetector {
    */
   async detectContradictions(
     text: string,
-    context?: Record<string, any>
+    _context?: Record<string, any>
   ): Promise<LogicalPattern[]> {
     const patterns: LogicalPattern[] = [];
 
@@ -287,7 +287,7 @@ export class StrangeLoopsDetector {
     // Check for keyword contradictions
     for (let i = 0; i < claims.length; i++) {
       for (let j = i + 1; j < claims.length; j++) {
-        const contradiction = this.checkContradiction(claims[i], claims[j]);
+        const contradiction = this.checkContradiction(claims[i]!, claims[j]!);
 
         if (contradiction) {
           patterns.push({
@@ -295,10 +295,10 @@ export class StrangeLoopsDetector {
             severity: contradiction.severity,
             description: contradiction.reason,
             location: [
-              ...this.locateCycle(text, [claims[i]]),
-              ...this.locateCycle(text, [claims[j]]),
+              ...this.locateCycle(text, [claims[i]!]),
+              ...this.locateCycle(text, [claims[j]!]),
             ],
-            chain: [claims[i].claim, claims[j].claim],
+            chain: [claims[i]!.claim, claims[j]!.claim],
             suggestion: 'Resolve contradictory statements with additional evidence',
           });
         }
@@ -317,7 +317,7 @@ export class StrangeLoopsDetector {
 
     // Check for keyword-based contradictions
     for (const [word1, word2] of this.CONTRADICTION_KEYWORDS) {
-      if (text1.includes(word1) && text2.includes(word2)) {
+      if (word1 && word2 && text1.includes(word1) && text2.includes(word2)) {
         return {
           node1: claim1.id,
           node2: claim2.id,
@@ -325,7 +325,7 @@ export class StrangeLoopsDetector {
           severity: 'high',
         };
       }
-      if (text1.includes(word2) && text2.includes(word1)) {
+      if (word1 && word2 && text1.includes(word2) && text2.includes(word1)) {
         return {
           node1: claim1.id,
           node2: claim2.id,
@@ -363,7 +363,7 @@ export class StrangeLoopsDetector {
    */
   async validateCausalChain(
     chain: CausalChain,
-    context?: Record<string, any>
+    _context?: Record<string, any>
   ): Promise<{
     valid: boolean;
     issues: LogicalPattern[];

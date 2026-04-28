@@ -83,9 +83,7 @@ async function testCRDGeneration(sandbox: Sandbox): Promise<TestResult> {
     }
 
     logs.push('Verifying CRD files...');
-    const verifyResult = await sandbox.commands.run(
-      'ls -la /workspace/controller/config/crd/bases/'
-    );
+    await sandbox.commands.run('ls -la /workspace/controller/config/crd/bases/');
 
     // Check for expected CRD files
     const expectedCRDs = ['ajj.io_applications.yaml', 'ajj.io_clusters.yaml'];
@@ -185,7 +183,7 @@ async function testJujutsuClient(sandbox: Sandbox): Promise<TestResult> {
 /**
  * Test Kubernetes deployment pattern simulation
  */
-async function testKubernetesDeployment(sandbox: Sandbox): Promise<TestResult> {
+async function _testKubernetesDeployment(sandbox: Sandbox): Promise<TestResult> {
   const startTime = Date.now();
   const logs: string[] = [];
 
@@ -324,7 +322,7 @@ async function testHelmChart(sandbox: Sandbox): Promise<TestResult> {
 async function runTests() {
   console.log('🚀 Starting E2B Kubernetes deployment tests...\n');
 
-  const sandbox = await Sandbox.create({
+  const sandbox = await (Sandbox as any).create({
     timeout: 600000, // 10 minutes
   });
 
@@ -379,7 +377,7 @@ async function runTests() {
 
     return results;
   } finally {
-    await sandbox.close();
+    await (sandbox as any).close();
   }
 }
 
@@ -396,4 +394,5 @@ if (require.main === module) {
     });
 }
 
-export { runTests, TestResult };
+export { runTests, _testKubernetesDeployment as testKubernetesDeployment };
+export type { TestResult };

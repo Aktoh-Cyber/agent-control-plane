@@ -44,8 +44,7 @@ export interface LearnerReport {
 export class NightlyLearner {
   private db: Database;
   private causalGraph: CausalMemoryGraph;
-  private reflexion: ReflexionMemory;
-  private skillLibrary: SkillLibrary;
+  // ReflexionMemory and SkillLibrary reserved for future consolidation phases
 
   constructor(
     db: Database,
@@ -63,8 +62,8 @@ export class NightlyLearner {
   ) {
     this.db = db;
     this.causalGraph = new CausalMemoryGraph(db);
-    this.reflexion = new ReflexionMemory(db, embedder);
-    this.skillLibrary = new SkillLibrary(db, embedder);
+    new ReflexionMemory(db, embedder);
+    new SkillLibrary(db, embedder);
   }
 
   /**
@@ -143,12 +142,12 @@ export class NightlyLearner {
    * - a = treatment indicator
    * - y = observed outcome
    */
-  async discover(config: {
+  async discover(_config: {
     minAttempts?: number;
     minSuccessRate?: number;
     minConfidence?: number;
     dryRun?: boolean;
-  }): Promise<CausalEdge[]> {
+  }): Promise<number> {
     return this.discoverCausalEdges();
   }
 
@@ -393,7 +392,7 @@ export class NightlyLearner {
     let created = 0;
 
     for (const candidate of candidates) {
-      const expId = this.causalGraph.createExperiment({
+      this.causalGraph.createExperiment({
         name: `Auto: ${candidate.treatment_task} Impact`,
         hypothesis: `${candidate.treatment_task} affects downstream outcomes`,
         treatmentId: candidate.treatment_id,

@@ -7,7 +7,7 @@ import { ProviderWorkflow } from '../anti-hallucination/provider-workflow';
 import type { MCPToolResponse, MedicalAnalysis, ProviderNotification } from '../types';
 
 export class ProviderNotifyTool {
-  private readonly workflow: ProviderWorkflow;
+  public readonly workflow: ProviderWorkflow;
 
   constructor() {
     this.workflow = new ProviderWorkflow();

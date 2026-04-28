@@ -65,7 +65,7 @@ export class AgentDBIntegration {
   private async findSimilarPatterns(patientData: PatientData): Promise<any[]> {
     const similarPatterns: any[] = [];
 
-    for (const [key, pattern] of this.patterns.entries()) {
+    for (const [_key, pattern] of this.patterns.entries()) {
       if (pattern.symptoms) {
         const similarity = this.calculateSimilarity(patientData.symptoms, pattern.symptoms);
         if (similarity > 0.7) {
