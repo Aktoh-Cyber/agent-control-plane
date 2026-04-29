@@ -56,26 +56,7 @@ export class KnowledgeBaseService {
   }
 
   private initializeKnowledgeBase(): void {
-    // Initialize with sample medical knowledge
-    this.knowledgeBase.set('hypertension', {
-      condition: 'Hypertension',
-      definition: 'Persistently elevated blood pressure',
-      criteria: 'Systolic >=140 or Diastolic >=90',
-      references: ['DOI: 10.1234/medj.1000'],
-    });
-
-    this.knowledgeBase.set('respiratory-infection', {
-      condition: 'Upper Respiratory Infection',
-      symptoms: ['cough', 'fever', 'congestion'],
-      treatment: 'Supportive care, rest, fluids',
-      references: ['DOI: 10.1234/medj.1001'],
-    });
-
-    this.knowledgeBase.set('diabetes', {
-      condition: 'Diabetes Mellitus',
-      types: ['Type 1', 'Type 2', 'Gestational'],
-      management: 'Glucose monitoring, medication, lifestyle',
-      references: ['DOI: 10.1234/medj.1002'],
-    });
+    // Knowledge base starts empty. Entries are populated at runtime
+    // via addKnowledge() from external data sources.
   }
 }

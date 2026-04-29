@@ -129,33 +129,27 @@ export class WebhookNotifier implements INotifier {
     const startTime = Date.now();
 
     try {
-      // In production, use fetch or axios
-      // const response = await fetch(endpoint, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     ...this.config.headers
-      //   },
-      //   body: JSON.stringify(payload),
-      //   signal: AbortSignal.timeout(this.config.timeout)
-      // });
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.config.headers,
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(this.config.timeout),
+      });
 
-      // Simulate webhook call
-      console.log(`[WEBHOOK] Sending to ${endpoint} (attempt ${attempt})`);
-      const simulatedSuccess = Math.random() > 0.1; // 90% success rate
-
-      if (!simulatedSuccess && attempt < maxAttempts) {
-        // Retry with exponential backoff
+      if (!response.ok && attempt < maxAttempts) {
         const backoffMs = Math.pow(2, attempt) * 1000;
         await this.delay(backoffMs);
         return this.sendWithRetry(endpoint, payload, attempt + 1);
       }
 
       return {
-        success: simulatedSuccess,
-        statusCode: simulatedSuccess ? 200 : 500,
+        success: response.ok,
+        statusCode: response.status,
         responseTime: Date.now() - startTime,
-        error: simulatedSuccess ? undefined : 'Webhook endpoint returned error',
+        error: response.ok ? undefined : `Webhook endpoint returned ${response.status}`,
       };
     } catch (error) {
       if (attempt < maxAttempts) {

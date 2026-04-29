@@ -184,9 +184,9 @@ export class AgentExecutor extends EventEmitter {
   // -----------------------------------------------------------------------
 
   /**
-   * Core agent runner. In a real deployment this calls through to the
-   * Claude Agent SDK streaming API. Here we provide the scaffolding that
-   * emits the correct events and integrates the action queue.
+   * Core agent runner. Calls the Anthropic API with the agent's system
+   * prompt and streams the response back via EventEmitter chunks.
+   * Falls back to a context-aware response if no API key is configured.
    */
   private async runAgent(
     agent: AgentDefinition,
@@ -194,49 +194,59 @@ export class AgentExecutor extends EventEmitter {
     conversationId: string,
     _toolsUsed: string[]
   ): Promise<string> {
-    // Build conversation context
     const history = this.getConversation(conversationId);
-    const contextLines = history.map((e) => `${e.role}: ${e.content}`);
 
-    // Emit an initial chunk indicating the agent has started
     this.emit('chunk', {
       data: `[${agent.name}] Processing task...\n`,
     });
 
-    // --- Placeholder integration point ---
-    // The actual agent invocation would look like:
-    //
-    //   import { claudeAgent } from 'agentic-flow/agents/claudeAgent';
-    //   const { output } = await claudeAgent(agent, task, (chunk) => {
-    //     this.emit('chunk', { data: chunk });
-    //   });
-    //
-    // For tool calls that require approval:
-    //
-    //   this.emit('tool_use', { tool, input });
-    //   if (requiresApproval(tool)) {
-    //     const actionId = crypto.randomUUID();
-    //     this.emit('action_required', { actionId, description, tool, input });
-    //     const resolution = await this.actionQueue.proposeAction(actionId, description, tool, input);
-    //     if (!resolution.approved) {
-    //       this.emit('chunk', { data: `Tool ${tool} rejected: ${resolution.reason}` });
-    //     }
-    //   }
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      logger.warn('ANTHROPIC_API_KEY not set — using context-only response');
+      const output = `[${agent.name}] No LLM backend configured. Set ANTHROPIC_API_KEY to enable agent responses.\n\nTask received: ${task}`;
+      this.emit('chunk', { data: output });
+      return output;
+    }
 
-    // For now, produce a simple output so the endpoint is functional.
-    const output = [
-      `Agent "${agent.name}" received task.`,
-      `Conversation context: ${contextLines.length} messages.`,
-      `Task: ${task}`,
-      '',
-      'This is a placeholder response. Wire the Claude Agent SDK streaming',
-      'invocation in AgentExecutor.runAgent() for production use.',
-    ].join('\n');
+    try {
+      const { default: Anthropic } = await import('@anthropic-ai/sdk');
+      const client = new Anthropic({ apiKey });
 
-    // Emit the output as a final chunk
-    this.emit('chunk', { data: output });
+      const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+      for (const entry of history) {
+        messages.push({ role: entry.role, content: entry.content });
+      }
+      messages.push({ role: 'user', content: task });
 
-    return output;
+      const model = process.env.LLM_MODEL || 'claude-sonnet-4-5-20250514';
+      const maxTokens = parseInt(process.env.LLM_MAX_TOKENS || '4096', 10);
+
+      const stream = await client.messages.stream({
+        model,
+        max_tokens: maxTokens,
+        system:
+          agent.systemPrompt ||
+          `You are ${agent.name}, a ${agent.description}. Respond helpfully and concisely.`,
+        messages,
+      });
+
+      const chunks: string[] = [];
+      for await (const event of stream) {
+        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          const text = event.delta.text;
+          chunks.push(text);
+          this.emit('chunk', { data: text });
+        }
+      }
+
+      return chunks.join('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error('Agent LLM call failed', { agent: agent.name, error: message });
+      const fallback = `[${agent.name}] LLM call failed: ${message}\n\nTask: ${task}`;
+      this.emit('chunk', { data: fallback });
+      return fallback;
+    }
   }
 
   /**

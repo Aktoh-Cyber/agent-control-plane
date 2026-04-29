@@ -134,31 +134,92 @@ export class SMSNotifier implements INotifier {
    * Send SMS via provider (Twilio/AWS SNS)
    */
   private async sendSMS(sms: { to: string; from: string; body: string }): Promise<boolean> {
-    // In production, integrate with Twilio:
-    // const client = require('twilio')(this.config.accountSid, this.config.authToken);
-    // await client.messages.create({ to: sms.to, from: sms.from, body: sms.body });
+    if (this.config.provider === 'aws-sns') {
+      // Dynamic import — requires @aws-sdk/client-sns to be installed
+      let SNSClient: any, PublishCommand: any;
+      try {
+        const mod = await import('@aws-sdk/client-sns' as string);
+        SNSClient = mod.SNSClient;
+        PublishCommand = mod.PublishCommand;
+      } catch {
+        throw new Error(
+          'AWS SNS provider requires @aws-sdk/client-sns. Install it with: npm install @aws-sdk/client-sns'
+        );
+      }
+      const sns = new SNSClient({});
+      const command = new PublishCommand({
+        PhoneNumber: sms.to,
+        Message: sms.body,
+        MessageAttributes: {
+          'AWS.SNS.SMS.SenderID': {
+            DataType: 'String',
+            StringValue: 'Horsemen',
+          },
+          'AWS.SNS.SMS.SMSType': {
+            DataType: 'String',
+            StringValue: 'Transactional',
+          },
+        },
+      });
+      const result = await sns.send(command);
+      return !!result.MessageId;
+    }
 
-    // Or AWS SNS:
-    // const sns = new AWS.SNS();
-    // await sns.publish({ PhoneNumber: sms.to, Message: sms.body }).promise();
+    if (this.config.provider === 'twilio') {
+      const response = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${this.config.accountSid}/Messages.json`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Authorization: `Basic ${Buffer.from(`${this.config.accountSid}:${this.config.authToken}`).toString('base64')}`,
+          },
+          body: new URLSearchParams({
+            To: sms.to,
+            From: sms.from,
+            Body: sms.body,
+          }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`Twilio API error: ${response.status}`);
+      }
+      return true;
+    }
 
-    // Simulate SMS sending
-    console.log(`[SMS] Sending to ${sms.to}: ${sms.body.substring(0, 50)}...`);
-    return true;
+    throw new Error(`Unsupported SMS provider: ${this.config.provider}`);
   }
 
   /**
    * Get SMS delivery report from provider
    */
-  async getDeliveryReport(_messageId: string): Promise<{
+  async getDeliveryReport(messageId: string): Promise<{
     status: string;
     errorCode?: string;
     errorMessage?: string;
   }> {
-    // In production, query provider API for delivery status
-    // For now, return mock data
-    return {
-      status: 'delivered',
-    };
+    if (this.config.provider === 'twilio') {
+      const response = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${this.config.accountSid}/Messages/${messageId}.json`,
+        {
+          headers: {
+            Authorization: `Basic ${Buffer.from(`${this.config.accountSid}:${this.config.authToken}`).toString('base64')}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        return { status: 'unknown', errorMessage: `Twilio API error: ${response.status}` };
+      }
+      const data = await response.json();
+      return {
+        status: data.status,
+        errorCode: data.error_code?.toString(),
+        errorMessage: data.error_message,
+      };
+    }
+
+    // AWS SNS does not support per-message delivery reports via API;
+    // delivery status is tracked via CloudWatch or SNS delivery status logging.
+    return { status: 'sent' };
   }
 }
