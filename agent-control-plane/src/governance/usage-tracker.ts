@@ -1,11 +1,12 @@
 /**
  * Usage Event Tracking
  *
- * Append-only in-memory event store for LLM usage events.
- * Capped at MAX_EVENTS to prevent unbounded memory growth.
- * DB backing will be added in a later phase.
+ * SQLite-backed event store for LLM usage events.
+ * Persists events to disk so data survives restarts.
+ * Falls back to in-memory SQLite if no path is provided.
  */
 
+import Database from 'better-sqlite3';
 import { v4 as uuidv4 } from 'uuid';
 
 // ---------------------------------------------------------------------------
@@ -38,15 +39,44 @@ export interface UsageSummary {
 }
 
 // ---------------------------------------------------------------------------
-// In-memory Event Store
+// SQLite-backed Event Store
 // ---------------------------------------------------------------------------
 
-const MAX_EVENTS = 10_000;
-
 export class EventStore {
-  private events: UsageEvent[] = [];
+  private db: Database.Database;
 
-  /** Append a usage event. Oldest events are evicted when MAX_EVENTS is reached. */
+  constructor(dbPath?: string) {
+    this.db = new Database(dbPath || ':memory:');
+    this.db.pragma('journal_mode = WAL');
+    this.db.pragma('synchronous = NORMAL');
+    this.initSchema();
+  }
+
+  private initSchema(): void {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS usage_events (
+        id TEXT PRIMARY KEY,
+        timestamp INTEGER NOT NULL,
+        org_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        agent_id TEXT,
+        tool_id TEXT,
+        model TEXT NOT NULL,
+        provider TEXT NOT NULL,
+        input_tokens INTEGER NOT NULL,
+        output_tokens INTEGER NOT NULL,
+        cost_usd REAL NOT NULL,
+        latency_ms INTEGER NOT NULL,
+        status TEXT NOT NULL CHECK(status IN ('success', 'error'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_usage_org ON usage_events(org_id, timestamp);
+      CREATE INDEX IF NOT EXISTS idx_usage_user ON usage_events(user_id, timestamp);
+      CREATE INDEX IF NOT EXISTS idx_usage_model ON usage_events(org_id, model);
+    `);
+  }
+
+  /** Append a usage event. Persisted to SQLite immediately. */
   trackUsage(input: UsageEventInput): UsageEvent {
     const event: UsageEvent = {
       ...input,
@@ -54,77 +84,154 @@ export class EventStore {
       timestamp: new Date(),
     };
 
-    this.events.push(event);
-
-    // Evict oldest when exceeding capacity
-    if (this.events.length > MAX_EVENTS) {
-      this.events = this.events.slice(this.events.length - MAX_EVENTS);
-    }
+    this.db
+      .prepare(
+        `
+      INSERT INTO usage_events (id, timestamp, org_id, user_id, agent_id, tool_id, model, provider, input_tokens, output_tokens, cost_usd, latency_ms, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `
+      )
+      .run(
+        event.id,
+        event.timestamp.getTime(),
+        event.orgId,
+        event.userId,
+        event.agentId || null,
+        event.toolId || null,
+        event.model,
+        event.provider,
+        event.inputTokens,
+        event.outputTokens,
+        event.costUsd,
+        event.latencyMs,
+        event.status
+      );
 
     return event;
   }
 
   /** Retrieve all usage events for an organisation, optionally filtered by date. */
   getUsageByOrg(orgId: string, since?: Date): UsageEvent[] {
-    return this.events.filter((e) => {
-      if (e.orgId !== orgId) return false;
-      if (since && e.timestamp < since) return false;
-      return true;
-    });
+    const sinceTs = since ? since.getTime() : 0;
+    const rows = this.db
+      .prepare(
+        `
+      SELECT * FROM usage_events
+      WHERE org_id = ? AND timestamp >= ?
+      ORDER BY timestamp DESC
+    `
+      )
+      .all(orgId, sinceTs) as any[];
+
+    return rows.map(this.rowToEvent);
   }
 
   /** Retrieve all usage events for a specific user, optionally filtered by date. */
   getUsageByUser(userId: string, since?: Date): UsageEvent[] {
-    return this.events.filter((e) => {
-      if (e.userId !== userId) return false;
-      if (since && e.timestamp < since) return false;
-      return true;
-    });
+    const sinceTs = since ? since.getTime() : 0;
+    const rows = this.db
+      .prepare(
+        `
+      SELECT * FROM usage_events
+      WHERE user_id = ? AND timestamp >= ?
+      ORDER BY timestamp DESC
+    `
+      )
+      .all(userId, sinceTs) as any[];
+
+    return rows.map(this.rowToEvent);
   }
 
   /** Build a summary of usage for an organisation. */
   getUsageSummary(orgId: string, since?: Date): UsageSummary {
-    const orgEvents = this.getUsageByOrg(orgId, since);
+    const sinceTs = since ? since.getTime() : 0;
 
-    let totalCost = 0;
-    let totalTokens = 0;
+    // Aggregate query for totals
+    const totals = this.db
+      .prepare(
+        `
+      SELECT
+        COALESCE(SUM(cost_usd), 0) as total_cost,
+        COALESCE(SUM(input_tokens + output_tokens), 0) as total_tokens,
+        COUNT(*) as event_count
+      FROM usage_events
+      WHERE org_id = ? AND timestamp >= ?
+    `
+      )
+      .get(orgId, sinceTs) as any;
+
+    // Per-model breakdown
+    const modelRows = this.db
+      .prepare(
+        `
+      SELECT
+        model,
+        SUM(cost_usd) as cost,
+        SUM(input_tokens + output_tokens) as tokens,
+        COUNT(*) as count
+      FROM usage_events
+      WHERE org_id = ? AND timestamp >= ?
+      GROUP BY model
+    `
+      )
+      .all(orgId, sinceTs) as any[];
+
     const byModel: Record<string, { cost: number; tokens: number; count: number }> = {};
-
-    for (const event of orgEvents) {
-      totalCost += event.costUsd;
-      const eventTokens = event.inputTokens + event.outputTokens;
-      totalTokens += eventTokens;
-
-      if (!byModel[event.model]) {
-        byModel[event.model] = { cost: 0, tokens: 0, count: 0 };
-      }
-      const entry = byModel[event.model]!;
-      entry.cost += event.costUsd;
-      entry.tokens += eventTokens;
-      entry.count += 1;
+    for (const row of modelRows) {
+      byModel[row.model] = {
+        cost: row.cost,
+        tokens: row.tokens,
+        count: row.count,
+      };
     }
 
     return {
-      totalCost,
-      totalTokens,
-      eventCount: orgEvents.length,
+      totalCost: totals.total_cost,
+      totalTokens: totals.total_tokens,
+      eventCount: totals.event_count,
       byModel,
     };
   }
 
   /** Return total number of stored events (for diagnostics). */
   get size(): number {
-    return this.events.length;
+    const row = this.db.prepare('SELECT COUNT(*) as count FROM usage_events').get() as any;
+    return row.count;
   }
 
   /** Clear all events (useful for testing). */
   clear(): void {
-    this.events = [];
+    this.db.exec('DELETE FROM usage_events');
+  }
+
+  /** Close the database connection. */
+  close(): void {
+    this.db.close();
+  }
+
+  /** Convert a database row to a UsageEvent. */
+  private rowToEvent(row: any): UsageEvent {
+    return {
+      id: row.id,
+      timestamp: new Date(row.timestamp),
+      orgId: row.org_id,
+      userId: row.user_id,
+      agentId: row.agent_id || undefined,
+      toolId: row.tool_id || undefined,
+      model: row.model,
+      provider: row.provider,
+      inputTokens: row.input_tokens,
+      outputTokens: row.output_tokens,
+      costUsd: row.cost_usd,
+      latencyMs: row.latency_ms,
+      status: row.status,
+    };
   }
 }
 
 // ---------------------------------------------------------------------------
-// Singleton instance
+// Singleton instance — uses file-backed DB in production, in-memory for tests
 // ---------------------------------------------------------------------------
 
-export const usageTracker = new EventStore();
+const DB_PATH = process.env.USAGE_TRACKER_DB_PATH || undefined;
+export const usageTracker = new EventStore(DB_PATH);

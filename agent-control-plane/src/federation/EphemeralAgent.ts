@@ -237,7 +237,7 @@ export class EphemeralAgent {
     }
 
     try {
-      await this.hub.sync(this.context.db);
+      await this.hub.sync();
     } catch (error: any) {
       logger.error('Federation sync failed', {
         agentId: this.context.agentId,

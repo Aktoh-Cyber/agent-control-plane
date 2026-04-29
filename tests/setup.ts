@@ -3,8 +3,6 @@
  * @description Global test setup for QUIC test suite
  */
 
-import { afterAll, beforeAll, vi } from 'vitest';
-
 // Global test configuration
 beforeAll(() => {
   // Set test environment variables
@@ -17,9 +15,9 @@ beforeAll(() => {
   // Mock console methods to reduce noise in tests
   global.console = {
     ...console,
-    log: vi.fn(),
-    debug: vi.fn(),
-    info: vi.fn(),
+    log: jest.fn(),
+    debug: jest.fn(),
+    info: jest.fn(),
     warn: console.warn, // Keep warnings
     error: console.error, // Keep errors
   };

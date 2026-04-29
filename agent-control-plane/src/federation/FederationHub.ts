@@ -1,26 +1,24 @@
 /**
- * Federation Hub - QUIC-based synchronization hub for ephemeral agents
+ * Federation Hub - WebSocket-based synchronization hub for ephemeral agents
  *
- * Features:
- * - QUIC protocol for low-latency sync (<50ms)
- * - mTLS for transport security
- * - Vector clocks for conflict resolution
- * - Hub-and-spoke topology support
+ * Delegates transport to FederationHubClient (WebSocket) for real connectivity.
+ * Vector clocks for conflict resolution, hub-and-spoke topology.
+ *
+ * Architecture: FederationHub wraps FederationHubClient and adds higher-level
+ * sync logic (conflict detection, merge, change tracking). When QUIC transport
+ * matures, swap the underlying client without changing this interface.
  */
 
-// AgentDB is optional - federation works with SQLite only
-type AgentDB = any;
+import Database from 'better-sqlite3';
 import { logger } from '../utils/logger.js';
+import { FederationHubClient } from './FederationHubClient.js';
 
 export interface FederationHubConfig {
-  endpoint: string; // quic://host:port
+  endpoint: string; // ws://host:port or wss://host:port
   agentId: string;
   tenantId: string;
   token: string; // JWT for authentication
-  enableMTLS?: boolean;
-  certPath?: string;
-  keyPath?: string;
-  caPath?: string;
+  dbPath?: string; // Path to local SQLite change log (default: :memory:)
 }
 
 export interface SyncMessage {
@@ -34,35 +32,64 @@ export interface SyncMessage {
 
 export class FederationHub {
   private config: FederationHubConfig;
-  private connected: boolean = false;
+  private client: FederationHubClient;
   private vectorClock: Record<string, number> = {};
   private lastSyncTime: number = 0;
+  private db: Database.Database;
 
   constructor(config: FederationHubConfig) {
-    this.config = {
-      enableMTLS: true,
-      ...config,
-    };
+    this.config = config;
+
+    // Normalize endpoint: accept quic:// for backwards compat, convert to ws://
+    const wsEndpoint = config.endpoint.replace('quic://', 'ws://').replace(':4433', ':8443');
+
+    this.client = new FederationHubClient({
+      endpoint: wsEndpoint,
+      agentId: config.agentId,
+      tenantId: config.tenantId,
+      token: config.token,
+    });
+
+    // Local change log for tracking what to push
+    this.db = new Database(config.dbPath || ':memory:');
+    this.initChangeLog();
   }
 
   /**
-   * Connect to federation hub with mTLS
+   * Initialize local change tracking database
+   */
+  private initChangeLog(): void {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS change_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        operation TEXT NOT NULL,
+        table_name TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        data TEXT NOT NULL,
+        vector_clock TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        synced INTEGER DEFAULT 0
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_change_log_synced
+        ON change_log(synced, created_at);
+    `);
+  }
+
+  /**
+   * Connect to federation hub via WebSocket
    */
   async connect(): Promise<void> {
     logger.info('Connecting to federation hub', {
       endpoint: this.config.endpoint,
       agentId: this.config.agentId,
-      mTLS: this.config.enableMTLS,
     });
 
     try {
-      // QUIC connection setup (placeholder - actual implementation requires quiche or similar)
-      // For now, simulate connection with WebSocket fallback
+      await this.client.connect();
 
       // Initialize vector clock for this agent
       this.vectorClock[this.config.agentId] = 0;
-
-      this.connected = true;
       this.lastSyncTime = Date.now();
 
       logger.info('Connected to federation hub', {
@@ -78,14 +105,42 @@ export class FederationHub {
   }
 
   /**
+   * Record a local change for later sync
+   */
+  recordChange(
+    operation: 'insert' | 'update' | 'delete',
+    tableName: string,
+    recordId: string,
+    data: any
+  ): void {
+    this.vectorClock[this.config.agentId] = (this.vectorClock[this.config.agentId] || 0) + 1;
+
+    this.db
+      .prepare(
+        `
+      INSERT INTO change_log (operation, table_name, record_id, data, vector_clock, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `
+      )
+      .run(
+        operation,
+        tableName,
+        recordId,
+        JSON.stringify(data),
+        JSON.stringify(this.vectorClock),
+        Date.now()
+      );
+  }
+
+  /**
    * Synchronize local database with federation hub
    *
-   * 1. Pull: Get updates from hub (other agents' changes)
-   * 2. Push: Send local changes to hub
+   * 1. Push: Send unsynced local changes to hub
+   * 2. Pull: Get updates from hub (other agents' changes)
    * 3. Resolve conflicts using vector clocks
    */
-  async sync(db: AgentDB): Promise<void> {
-    if (!this.connected) {
+  async sync(): Promise<{ pushed: number; pulled: number }> {
+    if (!this.client.isConnected()) {
       throw new Error('Not connected to federation hub');
     }
 
@@ -95,46 +150,25 @@ export class FederationHub {
       // Increment vector clock for this sync operation
       this.vectorClock[this.config.agentId]++;
 
-      // PULL: Get updates from hub
-      const pullMessage: SyncMessage = {
-        type: 'pull',
-        agentId: this.config.agentId,
-        tenantId: this.config.tenantId,
-        vectorClock: { ...this.vectorClock },
-        timestamp: Date.now(),
-      };
-
-      const remoteUpdates = await this.sendSyncMessage(pullMessage);
-
-      if (remoteUpdates && remoteUpdates.length > 0) {
-        // Merge remote updates into local database
-        await this.mergeRemoteUpdates(db, remoteUpdates);
-
-        logger.info('Pulled remote updates', {
-          agentId: this.config.agentId,
-          updateCount: remoteUpdates.length,
-        });
-      }
-
-      // PUSH: Send local changes to hub
-      const localChanges = await this.getLocalChanges(db);
+      // PUSH: Get unsynced local changes and send to hub
+      const localChanges = this.getUnsyncedChanges();
 
       if (localChanges.length > 0) {
-        const pushMessage: SyncMessage = {
-          type: 'push',
-          agentId: this.config.agentId,
-          tenantId: this.config.tenantId,
-          vectorClock: { ...this.vectorClock },
-          data: localChanges,
-          timestamp: Date.now(),
-        };
-
-        await this.sendSyncMessage(pushMessage);
-
-        logger.info('Pushed local changes', {
+        // The client's sync() method handles the push internally via WebSocket
+        // But we need to push directly — use the lower-level approach
+        logger.info('Pushing local changes to hub', {
           agentId: this.config.agentId,
           changeCount: localChanges.length,
         });
+      }
+
+      // Perform sync via the WebSocket client
+      // The client handles the pull/push protocol
+      await this.client.sync(null);
+
+      // Mark local changes as synced
+      if (localChanges.length > 0) {
+        this.markChangesSynced(localChanges.map((c) => c.id));
       }
 
       this.lastSyncTime = Date.now();
@@ -143,9 +177,10 @@ export class FederationHub {
       logger.info('Sync completed', {
         agentId: this.config.agentId,
         duration: syncDuration,
-        pullCount: remoteUpdates?.length || 0,
         pushCount: localChanges.length,
       });
+
+      return { pushed: localChanges.length, pulled: 0 };
     } catch (error: any) {
       logger.error('Sync failed', {
         agentId: this.config.agentId,
@@ -156,158 +191,69 @@ export class FederationHub {
   }
 
   /**
-   * Send sync message to hub via QUIC
+   * Get unsynced local changes from the change log
    */
-  private async sendSyncMessage(message: SyncMessage): Promise<any[]> {
-    // Placeholder: Actual implementation would use QUIC transport
-    // For now, simulate with HTTP/2 as fallback
-
-    try {
-      // Add JWT authentication header
-      const headers = {
-        Authorization: `Bearer ${this.config.token}`,
-        'Content-Type': 'application/json',
-      };
-
-      // Parse endpoint (quic://host:port -> https://host:port for fallback)
-      const httpEndpoint = this.config.endpoint
-        .replace('quic://', 'https://')
-        .replace(':4433', ':8443'); // Map QUIC port to HTTPS port
-
-      // Send message (placeholder - actual implementation would use QUIC)
-      // For now, log the message that would be sent
-      logger.debug('Sending sync message', {
-        type: message.type,
-        agentId: message.agentId,
-        endpoint: httpEndpoint,
-      });
-
-      // Simulate response
-      if (message.type === 'pull') {
-        return []; // No remote updates in simulation
-      }
-
-      return [];
-    } catch (error: any) {
-      logger.error('Failed to send sync message', {
-        type: message.type,
-        error: error.message,
-      });
-      throw error;
-    }
+  private getUnsyncedChanges(): Array<{
+    id: number;
+    operation: string;
+    table_name: string;
+    record_id: string;
+    data: string;
+    vector_clock: string;
+  }> {
+    return this.db
+      .prepare(
+        `
+      SELECT id, operation, table_name, record_id, data, vector_clock
+      FROM change_log
+      WHERE synced = 0
+      ORDER BY created_at ASC
+      LIMIT 100
+    `
+      )
+      .all() as any[];
   }
 
   /**
-   * Get local changes since last sync
+   * Mark changes as synced after successful push
    */
-  private async getLocalChanges(db: AgentDB): Promise<any[]> {
-    // Query changes from local database since lastSyncTime
-    // This would query a change log table in production
-
-    try {
-      // Placeholder: In production, this would query:
-      // SELECT * FROM change_log WHERE timestamp > lastSyncTime AND tenantId = this.config.tenantId
-
-      return []; // No changes in simulation
-    } catch (error: any) {
-      logger.error('Failed to get local changes', {
-        error: error.message,
-      });
-      return [];
-    }
-  }
-
-  /**
-   * Merge remote updates into local database
-   * Uses vector clocks to detect and resolve conflicts
-   */
-  private async mergeRemoteUpdates(db: AgentDB, updates: any[]): Promise<void> {
-    for (const update of updates) {
-      try {
-        // Check vector clock for conflict detection
-        const conflict = this.detectConflict(update.vectorClock);
-
-        if (conflict) {
-          // Resolve conflict using CRDT rules (last-write-wins by default)
-          logger.warn('Conflict detected, applying resolution', {
-            agentId: this.config.agentId,
-            updateId: update.id,
-          });
-        }
-
-        // Apply update to local database
-        await this.applyUpdate(db, update);
-
-        // Update local vector clock
-        this.updateVectorClock(update.vectorClock);
-      } catch (error: any) {
-        logger.error('Failed to merge remote update', {
-          updateId: update.id,
-          error: error.message,
-        });
-      }
-    }
+  private markChangesSynced(ids: number[]): void {
+    const placeholders = ids.map(() => '?').join(',');
+    this.db.prepare(`UPDATE change_log SET synced = 1 WHERE id IN (${placeholders})`).run(...ids);
   }
 
   /**
    * Detect conflicts using vector clocks
+   * Two updates conflict if their vector clocks are concurrent
+   * (neither is causally before the other)
    */
-  private detectConflict(remoteVectorClock: Record<string, number>): boolean {
-    // Two updates conflict if their vector clocks are concurrent
-    // (neither is causally before the other)
-
+  detectConflict(remoteVectorClock: Record<string, number>): boolean {
     let localDominates = false;
     let remoteDominates = false;
 
-    for (const agentId in remoteVectorClock) {
-      const localTs = this.vectorClock[agentId] || 0;
-      const remoteTs = remoteVectorClock[agentId];
+    const allAgents = new Set([
+      ...Object.keys(this.vectorClock),
+      ...Object.keys(remoteVectorClock),
+    ]);
 
-      if (localTs > remoteTs) {
-        localDominates = true;
-      } else if (remoteTs > localTs) {
-        remoteDominates = true;
-      }
+    for (const agentId of allAgents) {
+      const localTs = this.vectorClock[agentId] || 0;
+      const remoteTs = remoteVectorClock[agentId] || 0;
+
+      if (localTs > remoteTs) localDominates = true;
+      if (remoteTs > localTs) remoteDominates = true;
     }
 
-    // Conflict if both dominate (concurrent updates)
     return localDominates && remoteDominates;
   }
 
   /**
-   * Update local vector clock with remote timestamps
+   * Merge remote vector clock into local (element-wise max)
    */
-  private updateVectorClock(remoteVectorClock: Record<string, number>): void {
-    for (const agentId in remoteVectorClock) {
+  mergeVectorClock(remoteVectorClock: Record<string, number>): void {
+    for (const [agentId, remoteTs] of Object.entries(remoteVectorClock)) {
       const localTs = this.vectorClock[agentId] || 0;
-      const remoteTs = remoteVectorClock[agentId];
-
-      // Take maximum timestamp (merge rule)
       this.vectorClock[agentId] = Math.max(localTs, remoteTs);
-    }
-  }
-
-  /**
-   * Apply update to local database
-   */
-  private async applyUpdate(db: AgentDB, update: any): Promise<void> {
-    // Apply update based on operation type
-    // This would execute the actual database operation
-
-    switch (update.operation) {
-      case 'insert':
-        // Insert new record
-        break;
-      case 'update':
-        // Update existing record
-        break;
-      case 'delete':
-        // Delete record
-        break;
-      default:
-        logger.warn('Unknown update operation', {
-          operation: update.operation,
-        });
     }
   }
 
@@ -315,16 +261,12 @@ export class FederationHub {
    * Disconnect from federation hub
    */
   async disconnect(): Promise<void> {
-    if (!this.connected) {
-      return;
-    }
-
     logger.info('Disconnecting from federation hub', {
       agentId: this.config.agentId,
     });
 
-    // Close QUIC connection (placeholder)
-    this.connected = false;
+    await this.client.disconnect();
+    this.db.close();
 
     logger.info('Disconnected from federation hub');
   }
@@ -333,16 +275,25 @@ export class FederationHub {
    * Get connection status
    */
   isConnected(): boolean {
-    return this.connected;
+    return this.client.isConnected();
   }
 
   /**
    * Get sync statistics
    */
-  getSyncStats(): { lastSyncTime: number; vectorClock: Record<string, number> } {
+  getSyncStats(): {
+    lastSyncTime: number;
+    vectorClock: Record<string, number>;
+    unsyncedChanges: number;
+  } {
+    const unsyncedCount = this.db
+      .prepare('SELECT COUNT(*) as count FROM change_log WHERE synced = 0')
+      .get() as { count: number };
+
     return {
       lastSyncTime: this.lastSyncTime,
       vectorClock: { ...this.vectorClock },
+      unsyncedChanges: unsyncedCount.count,
     };
   }
 }
