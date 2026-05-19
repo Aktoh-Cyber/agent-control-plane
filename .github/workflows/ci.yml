@@ -116,6 +116,15 @@ jobs:
       - name: Install root dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install inner ACP dependencies
+        # The route tests import handlers from agent-control-plane/src/**,
+        # which has transitive deps (uuid, drizzle, etc.) installed only
+        # by the inner package.json. The root pnpm install doesn't reach
+        # them. Without this step vitest fails to resolve `uuid` when
+        # governance/model-policies.ts is loaded.
+        run: pnpm install --frozen-lockfile
+        working-directory: agent-control-plane
+
       # Cache the route-test sub-project's node_modules separately from
       # the main pnpm cache (it uses npm, not pnpm, because Pulumi
       # policy packs and vitest's plugin model prefer the flat npm
