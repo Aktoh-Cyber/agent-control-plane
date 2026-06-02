@@ -27,6 +27,16 @@ export default [
       '**/.swarm/**',
       '**/test-reports/**',
       '**/test-results/**',
+
+      // The repo has a nested ./agent-control-plane/ subdir (the actual
+      // agentic-flow codebase, with its own package.json + tsconfig at
+      // agent-control-plane/config/tsconfig.json). The root eslint can't
+      // resolve project-service for those files because their tsconfig
+      // isn't rooted at our tsconfigRootDir (import.meta.dirname →
+      // config/ at the root). Skip them here; the inner package's own
+      // `pnpm typecheck` (config/tsconfig.json) is the canonical type
+      // gate for that code.
+      'agent-control-plane/**',
     ],
   },
 

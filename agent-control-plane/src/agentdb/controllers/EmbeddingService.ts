@@ -105,7 +105,11 @@ export class EmbeddingService {
     });
 
     const data = (await response.json()) as { data: { embedding: number[] }[] };
-    return new Float32Array(data.data[0].embedding);
+    const first = data.data[0];
+    if (!first) {
+      throw new Error('Embedding API returned an empty `data` array');
+    }
+    return new Float32Array(first.embedding);
   }
 
   private mockEmbedding(text: string): Float32Array {
