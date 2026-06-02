@@ -159,8 +159,14 @@ interface RouterLayer {
 }
 
 function getRoutes(app: express.Application): Array<{ path: string; method: string }> {
-  const stack: RouterLayer[] = (app as unknown as { _router: { stack: RouterLayer[] } })._router
-    .stack;
+  // Express 5 moved the internal router from app._router to app.router.
+  // Older versions (Express 4 and pre-2024 Express 5 alphas) used
+  // _router. Probe both so the introspection works across versions.
+  const expressApp = app as unknown as {
+    router?: { stack?: RouterLayer[] };
+    _router?: { stack?: RouterLayer[] };
+  };
+  const stack: RouterLayer[] = expressApp.router?.stack ?? expressApp._router?.stack ?? [];
   const routes: Array<{ path: string; method: string }> = [];
   for (const layer of stack) {
     if (layer.route) {
