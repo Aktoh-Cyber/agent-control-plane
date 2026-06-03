@@ -53,23 +53,26 @@ class QuicWorkflowOrchestrator {
             this.agents.set(step.id, result);
             break;
 
-          case 'execute':
+          case 'execute': {
             const agentId = this.agents.get(step.dependencies?.[0] || '');
             if (!agentId) throw new Error('Agent not found');
             result = await this.executeTask(agentId, step.task);
             break;
+          }
 
-          case 'aggregate':
+          case 'aggregate': {
             const agentIds =
               step.dependencies?.map((id) => this.agents.get(id)).filter(Boolean) || [];
             result = await this.aggregateResults(agentIds);
             break;
+          }
 
-          case 'terminate':
+          case 'terminate': {
             const targetId = this.agents.get(step.dependencies?.[0] || '');
             if (targetId) await this.terminateAgent(targetId);
             result = { terminated: true };
             break;
+          }
         }
 
         results.push({

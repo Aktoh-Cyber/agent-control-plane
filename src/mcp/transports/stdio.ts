@@ -232,35 +232,35 @@ server.setRequestHandler(CallToolRequestSchema, async (request: any, _extra: any
 
     switch (name) {
       case 'medical_analyze':
-        result = await medicalAnalyze.execute(args as any);
+        result = await medicalAnalyze.execute(args);
         break;
 
       case 'medical_verify':
-        result = await medicalVerify.execute(args as any);
+        result = await medicalVerify.execute(args);
         break;
 
       case 'provider_notify':
-        result = await providerNotify.execute(args as any);
+        result = await providerNotify.execute(args);
         break;
 
       case 'confidence_score':
-        result = await confidenceScore.execute(args as any);
+        result = await confidenceScore.execute(args);
         break;
 
       case 'citation_verify':
-        result = await citationVerify.execute(args as any);
+        result = await citationVerify.execute(args);
         break;
 
       case 'knowledge_search':
         // Convert string dates to Date objects
-        if ((args as any)?.filters?.dateRange) {
-          const dr = (args as any).filters.dateRange;
-          (args as any).filters.dateRange = {
+        if (args?.filters?.dateRange) {
+          const dr = args.filters.dateRange;
+          args.filters.dateRange = {
             start: dr.start ? new Date(dr.start) : undefined,
             end: dr.end ? new Date(dr.end) : undefined,
           };
         }
-        result = await knowledgeSearch.execute(args as any);
+        result = await knowledgeSearch.execute(args);
         break;
 
       default:

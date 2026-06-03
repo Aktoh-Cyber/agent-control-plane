@@ -377,7 +377,7 @@ async function runTests() {
 
     return results;
   } finally {
-    await (sandbox as any).close();
+    await sandbox.close();
   }
 }
 

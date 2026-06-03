@@ -185,7 +185,7 @@ function testGoModule() {
       { pattern: /k8s\.io\/client-go/, name: 'Kubernetes client' },
     ];
 
-    let allPassed = true;
+    const allPassed = true;
     for (const check of checks) {
       if (check.pattern.test(goMod)) {
         console.log(`   ✓ ${check.name}`);

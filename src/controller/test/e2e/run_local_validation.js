@@ -50,7 +50,7 @@ function testControllerSource() {
   ];
 
   let allExist = true;
-  let stats = { total: 0, found: 0, missing: 0, size: 0 };
+  const stats = { total: 0, found: 0, missing: 0, size: 0 };
 
   for (const file of files) {
     const fullPath = path.join(BASE_PATH, file);
@@ -147,7 +147,7 @@ function testHelmChart() {
   ];
 
   let allExist = true;
-  let stats = { total: 0, found: 0, missing: 0 };
+  const stats = { total: 0, found: 0, missing: 0 };
 
   for (const file of files) {
     const fullPath = path.join(chartPath, file);
@@ -192,7 +192,7 @@ function testTestFiles() {
   ];
 
   let allExist = true;
-  let stats = { total: 0, found: 0, missing: 0 };
+  const stats = { total: 0, found: 0, missing: 0 };
 
   for (const file of testFiles) {
     const fullPath = path.join(BASE_PATH, file);
@@ -235,7 +235,7 @@ function testDocumentation() {
   ];
 
   let allExist = true;
-  let stats = { total: 0, found: 0, missing: 0, totalLines: 0 };
+  const stats = { total: 0, found: 0, missing: 0, totalLines: 0 };
 
   for (const file of docFiles) {
     const fullPath = path.join(BASE_PATH, file);

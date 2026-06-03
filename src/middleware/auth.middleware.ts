@@ -42,7 +42,7 @@ let jwtVerify: ((token: string, secret: string) => Record<string, unknown>) | nu
 
 try {
   // jsonwebtoken may or may not be installed in the ACP
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+
   const jwtModule = await import('jsonwebtoken');
   const jwt = jwtModule.default ?? jwtModule;
   jwtVerify = (token: string, secret: string) =>
@@ -169,7 +169,7 @@ function extractPropagatedIdentity(req: Request): HorsemenIdentity | null {
   const userId = req.headers['x-user-id'] as string | undefined;
   const rolesHeader = req.headers['x-user-roles'] as string | undefined;
   const teamId = req.headers['x-team-id'] as string | undefined;
-  const authHeader = req.headers['authorization'] as string | undefined;
+  const authHeader = req.headers['authorization'];
 
   if (!orgId || !userId) return null;
 

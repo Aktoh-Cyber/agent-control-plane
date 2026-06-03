@@ -195,7 +195,7 @@ function testDockerfile() {
       { pattern: /jj/, name: 'Jujutsu installation' },
     ];
 
-    let allPassed = true;
+    const allPassed = true;
     for (const check of checks) {
       if (check.pattern.test(content)) {
         console.log(`   ✓ ${check.name}`);
