@@ -36,7 +36,10 @@ export default [
       // config/ at the root). Skip them here; the inner package's own
       // `pnpm typecheck` (config/tsconfig.json) is the canonical type
       // gate for that code.
-      'agent-control-plane/**',
+      // Use **/ anchor: when ESLint is invoked with --config config/eslint.config.js,
+      // some path resolution treats globs as relative to the config file dir.
+      // **/agent-control-plane/** matches the nested subdir regardless of cwd.
+      '**/agent-control-plane/**',
     ],
   },
 
