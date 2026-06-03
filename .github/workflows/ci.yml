@@ -156,7 +156,11 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [lint]
+    # Decoupled from lint: with lint advisory (chronic debt, tracked in
+    # specs/active/ACP-Lint-Cleanup-2026-06-02.md), build was being
+    # skipped on every push because needs: [lint] blocked it. tsc is
+    # an independent gate from eslint — let it run on its own.
+    needs: [test]
 
     steps:
       - name: Checkout code
